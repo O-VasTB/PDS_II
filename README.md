@@ -1,4 +1,4 @@
 # PDS_II
-Grupo do nosso trabalho de PDS
+Grupo Z do trabalho final de PDS_II da UFMG 2026/2
 
-Em primeiro ponto esse projeto será uma implementação de rede social
+A primeiro momento o tema do projeto foi definido como a implementação de uma rede social
