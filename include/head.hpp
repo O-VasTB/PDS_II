@@ -1,0 +1,1 @@
+//Aqui é onde ficará apenas as declarações do cabeçalho das funções e classes e structs

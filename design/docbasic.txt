@@ -1,0 +1,1 @@
+Aqui eu vou colocar a documentação do código penso em usar o doxygen mas por enquanto será feito em txt
