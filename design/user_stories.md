@@ -16,3 +16,19 @@
 - O HUD do personagem é atualizado instantaneamente ao coletar uma moeda.
 - Quando uma moeda é coletada um som de confirmação deve ser tocado.
 - Upgrades podem ser comprados com as moedas coletadas.
+
+## US03: Interação e Derrota de Inimigos
+**Descrição:** Como jogador, quero que inimigos sejam derrotados, no momento de contato, ao pular na cabeça deles.
+**Critérios de Aceitação:**
+- Pular sobre a cabeça do inimigo o elimina no contato e dá um pequeno impulso ao jogador.
+- Colidir lateralmente com o inimigo faz o jogador perder uma vida ou perder o power-up/diminuir de tamanho, caso tenha algum item.
+- O inimigo se move em patrulha entre os limites da plataforma, deslocando-se somente no eixo x.
+- Ao ser derrotado, o inimigo emite um som e toca uma animação de eliminação.
+
+## US04: Sistema de Vidas e Game Over
+**Descrição:** Como jogador, quero que exista um limite de vidas, que podem ser portadas, para haver desafio durante a partida.
+**Critérios de Aceitação:**
+- O jogador inicia a partida com 3 vidas.
+- Ao cair em buracos ou perder todos os power-up carregados, perde 1 vida e reinicia a fase do ponto de salvamento mais próximo.
+- Se o número de vidas chegar a 0, exibe a tela de Game Over.
+- A tela de Game Over permite reiniciar a partida do início da fase ou voltar ao menu principal.
