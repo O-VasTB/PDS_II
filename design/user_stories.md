@@ -32,3 +32,19 @@
 - Ao cair em buracos ou perder todos os power-up carregados, perde 1 vida e reinicia a fase do ponto de salvamento mais próximo.
 - Se o número de vidas chegar a 0, exibe a tela de Game Over.
 - A tela de Game Over permite reiniciar a partida do início da fase ou voltar ao menu principal.
+
+## US05: Power-ups (Cogumelo / Flor)
+**Descrição:** Como jogador, quero coletar itens para aumentar minha resistência e habilidades.
+**Critérios de Aceitação:**
+- Atingir blocos "?" por baixo faz o power-up surgir.
+- O Cogumelo aumenta o tamanho do jogador e permite absorver um golpe.
+- O visual do personagem muda para a forma "Super".
+- O item desliza pelas plataformas até atingir o jogador ou um obstáculo.
+
+## US06: Menu Principal e Pausa
+**Descrição:** Como jogador, quero um menu principal para iniciar e um menu de pausa durante o jogo.
+**Critérios de Aceitação:**
+- O menu principal oferece opções para "Iniciar Jogo", "Instruções" e "Sair".
+- Pressionar ESC ou P pausa a física e movimentação do jogo.
+- O menu de pausa permite retomar a partida ou voltar ao menu principal.
+- O áudio de fundo entra em estado de pausa junto com a física.
