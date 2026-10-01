@@ -9,8 +9,12 @@
  * físicas entre entidades e a renderização gráfica via biblioteca Raylib.
  */
 
-#include "entity_head.hpp"
 #include <raylib.h>
+#include "entity.hpp"
+#include "Jogador.hpp"
+#include "item.hpp"
+#include "inimigo.hpp"
+
 
 /**
  * @class ColisionAssist
