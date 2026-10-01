@@ -2,25 +2,24 @@
 #define JOGADOR_HPP
 #include "entity.hpp"
 
-class Jogador : public Entity {
+/**
+ * @class Jogador
+ * @brief Gerencia as propriedades e comportamentos do jogador no jogo.
+ */
+class Jogador : public EntityData {
 private:
     int vidas;         /**< Quantidade de vidas restantes do jogador. */
     int pontuacao;     /**< Pontuação acumulada. */
-    bool noChao;       /**< Estado do jogador (se está no chão ou no ar). */
 
 public:
     /**
      * @brief Construtor da classe Jogador.
+     * @param type Tipo da entidade.
      * @param x Posição X inicial.
      * @param y Posição Y inicial.
+     * @param speed Velocidade inicial.
      */
-    Jogador(float x = 0.0f, float y = 0.0f);
-
-    /**
-     * @brief Atualiza a posição e o estado do jogador.
-     * @param deltaTime Tempo decorrido.
-     */
-    void atualizar(float deltaTime) override;
+    Jogador(EntityType type, float x = 0.0f, float y = 0.0f, float speed = 0.0f);
 
     /**
      * @brief Executa a ação de pulo do jogador.
