@@ -13,10 +13,11 @@ public:
     void processarEntradas();
 
     /**
-     * @brief Verifica se uma determinada tecla foi pressionada.
-     * @return Verdadeiro se a tecla estiver pressionada.
+     * @brief Verifica se uma determinada tecla ou ação está pressionada.
+     * @param codigoTecla Código ou identificador da tecla/comando a ser verificado.
+     * @return Verdadeiro se a tecla solicitada estiver pressionada.
      */
-    bool isTeclaPressionada() const;
+    bool isTeclaPressionada(int codigoTecla) const;
 };
 
 #endif // GERENCIADOR_INPUT_HPP
