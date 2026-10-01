@@ -20,7 +20,7 @@ enum class EntityType {
     Jogador, /**< Entidade do jogador principal. */
     Tiro,    /**< Entidade de tiro disparado pelo jogador. */
     Inimigo, /**< Entidade de inimigo no mapa. */
-    Moeda    /**< Entidade colecionável de moeda. */
+    Item    /**< Entidade de colecionáveis. */
 };
 
 /**
