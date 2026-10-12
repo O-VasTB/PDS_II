@@ -22,7 +22,6 @@
 #include "inimigo.hpp"
 #include "item.hpp"
 #include "mapa.hpp"
-#include "functions.hpp"
  
 /**
  * @class GerenciadorColisao

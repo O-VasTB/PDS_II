@@ -19,10 +19,9 @@
 #include "inimigo.hpp"
 #include "item.hpp"
 #include "mapa.hpp"
-#include "HUD.hpp"
+#include "hud.hpp"
 #include "GerenciadorInput.hpp"
 #include "GerenciadorColisao.hpp"
-#include "functions.hpp"
  
 /**
  * @enum EstadoJogo
