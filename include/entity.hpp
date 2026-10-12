@@ -28,8 +28,8 @@ enum class EntityType {
  * @brief Estrutura bidimensional para coordenadas no espaço 2D.
  */
 struct Pos {
-    double x; /**< Posição no eixo horizontal X. */
-    double y; /**< Posição no eixo vertical Y. */
+    float x; /**< Posição no eixo horizontal X. */
+    float y; /**< Posição no eixo vertical Y. */
 };
 
 /**
