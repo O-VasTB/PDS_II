@@ -37,6 +37,12 @@ public:
      * @return Quantidade de vidas.
      */
     int getVidas() const;
+
+    /** @brief Retorna a largura da caixa de colisão, em pixels. */
+    float getLargura() const;
+
+    /** @brief Retorna a altura da caixa de colisão, em pixels. */
+    float getAltura() const;
 };
 
 #endif // JOGADOR_HPP
