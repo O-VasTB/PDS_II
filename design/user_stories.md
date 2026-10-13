@@ -11,7 +11,7 @@
 ## US02: Coleta de Moedas
 **Descrição:** Como jogador, quero coletar moedas espalhadas pela fase para converter em itens ao final de cada fase e melhorar a pontuação.
 **Critérios de Aceitação:**
-- Moedas devem ser geradas aleatoriamente pelo mapa
+- Moedas devem ser posicionadas anteriormente pelo mapa
 - A moeda desaparece imediatamente após a colisão com o jogador.
 - O HUD do personagem é atualizado instantaneamente ao coletar uma moeda.
 - Quando uma moeda é coletada um som de confirmação deve ser tocado.
