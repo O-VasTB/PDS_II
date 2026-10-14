@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <string>
-#include "alib.h" // Substitui os includes diretos do Allegro pela biblioteca alib
+#include "alib.h" 
 
 /** 
  * @brief Estrutura que representa um bloco individual no mapa.
