@@ -145,9 +145,7 @@ void Jogo::atualizar(float dt) {
 
     removerInativos();
 
-    // TODO(Jogador): trocar os zeros por moedas e pontuação reais quando o
-    // Jogador tiver getters (ex.: getPontuacao()).
-    _hud.atualizarDados(_jogador.getVidas(), 0, 0);
+    _hud.atualizarDados(_jogador.getVidas(), 0, _jogador.getPontuacao());
 
     if (_jogador.getVidas() <= 0) {
         setEstado(EstadoJogo::GAME_OVER);
