@@ -6,7 +6,7 @@
  * não têm os métodos necessários, ou dos caminhos reais dos arquivos.
  */
 
-#include "../include/Jogo.hpp"
+#include "Jogo.hpp"
 
 #include <algorithm>
 #include <raylib.h>
@@ -166,16 +166,31 @@ void Jogo::desenhar() {
             DrawText("Pressione ENTER para jogar", 260, 230, 20, GRAY);
             break;
 
-        case EstadoJogo::JOGANDO:
+       case EstadoJogo::JOGANDO:
         case EstadoJogo::PAUSADO:
             _mapa.desenharBlocosVisiveis(0.0f, 0.0f);
+            
+            // Desenha os inimigos (vermelho)
             for (const Inimigo& inimigo : _inimigos) {
-                _renderizador.desenharEntidade(inimigo);
+                Pos p = inimigo.getPosition();
+                DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
+                              static_cast<int>(inimigo.getLargura()), static_cast<int>(inimigo.getAltura()), RED);
             }
+            
+            // Desenha os itens (dourado)
             for (const Item& item : _itens) {
-                _renderizador.desenharEntidade(item);
+                Pos p = item.getPosition();
+                DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
+                              static_cast<int>(item.getLargura()), static_cast<int>(item.getAltura()), GOLD);
             }
-            _renderizador.desenharEntidade(_jogador);
+            
+            // Desenha o jogador (azul)
+            {
+                Pos p = _jogador.getPosition();
+                DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
+                              static_cast<int>(_jogador.getLargura()), static_cast<int>(_jogador.getAltura()), BLUE);
+            }
+
             _hud.renderizar();
             if (_estado == EstadoJogo::PAUSADO) {
                 DrawText("PAUSADO", 330, 200, 30, DARKGRAY);

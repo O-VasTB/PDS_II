@@ -92,9 +92,7 @@ public:
                    std::vector<Item>& itens,
                    const Mapa& mapa,
                    float dt);
- 
-private:
-    ColisionAssist _assistente;  /**< Aplica o efeito de colisões genéricas. */
+
 };
  
 #endif  // GERENCIADOR_COLISAO_HPP

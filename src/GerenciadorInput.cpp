@@ -1,17 +1,17 @@
 /**
  * @file GerenciadorInput.cpp
- * @brief Implementação dos métodos da classe GerenciadorInput utilizando a alib.
+ * @brief Implementação dos métodos da classe GerenciadorInput utilizando a Raylib.
  */
 
 #include "GerenciadorInput.hpp"
-#include "alib.h"
+#include <raylib.h>
 
 void GerenciadorInput::processarEntradas() {
-    // Processamento de entradas utilizando as funções disponibilizadas pela alib
-    // (Adicione aqui a lógica de leitura de eventos caso a alib gerencie filas ou estados)
+    // Na Raylib, a verificação de teclas é feita diretamente sob demanda,
+    // portanto este método pode ficar vazio ou gerenciar estados globais se necessário.
 }
 
 bool GerenciadorInput::isTeclaPressionada(int codigoTecla) const {
-    // Delega a verificação da tecla para a alib ou utiliza a estrutura padrão suportada por ela
-    return alib::isTeclaPressionada(codigoTecla); // Ajuste conforme a assinatura exata das funções da alib no projeto
+    // Utiliza a função IsKeyDown da Raylib para verificar se a tecla está pressionada
+    return IsKeyDown(codigoTecla);
 }

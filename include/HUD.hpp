@@ -2,8 +2,7 @@
 #define HUD_HPP
 
 #include <string>
-#include "alib.h" // Substitui os includes diretos do Allegro pela biblioteca alib
-
+#include <raylib.h> 
 /**
  * @brief Classe responsável por exibir as informações de interface (HUD) para o jogador.
  * 
@@ -15,10 +14,9 @@ private:
     int moedas;    /**< Quantidade de moedas coletadas */
     int pontuacao; /**< Pontuação atual obtida */
 
-   
-    ALLEGRO_FONT* fonteHUD;     /**< Ponteiro para a fonte usada na renderização dos textos */
-    ALLEGRO_BITMAP* iconeVida;    /**< Ponteiro opcional para um ícone ilustrativo de vida */
-    ALLEGRO_BITMAP* iconeMoeda;   /**< Ponteiro opcional para um ícone ilustrativo de moeda */
+    Font fonteHUD;         /**< Estrutura de fonte do Raylib */
+    Texture2D iconeVida;   /**< Textura do ícone de vida no Raylib */
+    Texture2D iconeMoeda;  /**< Textura do ícone de moeda no Raylib */
 
 public:
     /**
@@ -28,7 +26,7 @@ public:
 
     /**
      * @brief Destrutor da classe HUD.
-     * Responsável por liberar a memória dos recursos utilizando as funções de limpeza da alib.
+     * Responsável por descarregar os recursos da Raylib.
      */
     ~HUD();
 
@@ -49,7 +47,6 @@ public:
 
     /**
      * @brief Renderiza os elementos do HUD (textos e ícones) na tela.
-     * Como o HUD lida com elementos fixos na tela, o desenho independe da posição da câmera.
      */
     void renderizar() const;
 };

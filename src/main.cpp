@@ -1,1 +1,7 @@
-// Esse será o arquivo principal do código
+#include "Jogo.hpp"
+
+int main() {
+    Jogo jogo;
+    jogo.executar();
+    return 0;
+}

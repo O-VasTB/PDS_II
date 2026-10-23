@@ -3,12 +3,12 @@
 
 #include <vector>
 #include <string>
-#include "alib.h" 
+#include <raylib.h> 
 
 /** 
  * @brief Estrutura que representa um bloco individual no mapa.
  * 
- * Armazena as propriedades físicas de cada bloco (sólido, destrutível, transponível)
+ * Armazena as propriedades físicas de cada bloco (sólido, destrutível, transponivel)
  */
 struct Bloco {
     bool solido; /**< Indica se o bloco bloqueia a passagem (parede, chão) */
@@ -20,7 +20,7 @@ struct Bloco {
 /**
  * @brief Classe responsável por gerenciar o cenário do jogo.
  * 
- * Esta classe carrega a estrutura da fase, lida com a matriz de blocos e renderiza os visíveis usando a alib. 
+ * Esta classe carrega a estrutura da fase, lida com a matriz de blocos e renderiza os visíveis usando a Raylib. 
  */
 class Mapa {
     private:
@@ -28,7 +28,7 @@ class Mapa {
     int largura; /**< Limite de largura da fase em blocos ou pixels */
     int altura; /**< Limite de altura da fase em blocos ou pixels */  
 
-    ALLEGRO_BITMAP* tileset; /**< Ponteiro para a imagem que contém os sprites de todos os blocos do mapa */
+    Texture2D tileset; /**< Textura da Raylib que contém os sprites de todos os blocos do mapa */
 
     public:
     /**
@@ -38,14 +38,14 @@ class Mapa {
 
     /**
      * @brief Destrutor da classe Mapa.
-     * Responsavel por destruir o bitmap do tileset para evitar vazamento de memória.
+     * Responsável por descarregar a textura do tileset para evitar vazamento de memória.
      */
     ~Mapa();
 
     /**
      * @brief Carrega a estrutura e matriz de blocos, além da imagem (tileset) do mapa. 
      * @param caminhoDados Caminho para o arquivo contendo a matriz de configuração
-     * @param caminhoImagem Caminho para a imagem PNG/BMP que sera carregada no tileset.
+     * @param caminhoImagem Caminho para a imagem PNG/BMP que será carregada no tileset.
      * @return true se carregou com sucesso, false caso contrário.
      */
     bool carregarMapa(const std::string& caminhoDados, const std::string& caminhoImagem);

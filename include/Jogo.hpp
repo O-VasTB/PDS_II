@@ -78,7 +78,6 @@ private:
     HUD _hud;                         /**< Pontos, vidas e demais informações. */
     GerenciadorInput _input;          /**< Leitura do teclado. */
     GerenciadorColisao _colisao;      /**< Gravidade e colisões. */
-    RenderAssist _renderizador;       /**< Desenho das entidades. */
  
     /** @brief Carrega o mapa e posiciona jogador, inimigos e itens. */
     void inicializar();
