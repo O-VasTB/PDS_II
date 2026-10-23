@@ -26,3 +26,19 @@ void Jogador::tomarDano(int quantidade) {
 int Jogador::getVidas() const {
     return vidas;
 }
+
+int Jogador::getPontuacao() const {
+    return pontuacao;
+}
+
+void Jogador::adicionarPontos(int quantidade) {
+    pontuacao += quantidade;
+}
+
+float Jogador::getLargura() const {
+    return 32.0f; // Largura padrão da caixa de colisão do jogador
+}
+
+float Jogador::getAltura() const {
+    return 32.0f; // Altura padrão da caixa de colisão do jogador
+}

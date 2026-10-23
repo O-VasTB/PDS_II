@@ -43,6 +43,18 @@ public:
 
     /** @brief Retorna a altura da caixa de colisão, em pixels. */
     float getAltura() const;
+
+    /**
+     * @brief Obtém a pontuação acumulada do jogador.
+     * @return Pontuação atual.
+     */
+    int getPontuacao() const;
+
+    /**
+     * @brief Adiciona pontos à pontuação atual do jogador.
+     * @param quantidade Quantidade de pontos a serem adicionados.
+     */
+    void adicionarPontos(int quantidade);
 };
 
 #endif // JOGADOR_HPP

@@ -1,6 +1,11 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
+
+#include <iostream>
+#include <vector>
+#include <raylib.h>
+
 /**
  * @file entity.hpp
  * @brief Definição da estrutura de dados base e da classe abstrata de entidades.

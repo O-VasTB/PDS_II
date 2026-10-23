@@ -9,7 +9,7 @@
  * físicas entre entidades e a renderização gráfica via biblioteca Raylib.
  */
 
-#include "entity_head.hpp"
+#include "entity.hpp"
 #include <raylib.h>
 
 /**

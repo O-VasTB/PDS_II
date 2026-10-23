@@ -60,7 +60,8 @@ void GerenciadorColisao::tratarJogadorItens(Jogador& jogador, std::vector<Item>&
 
         if (verificarColisao(recJogador, recItem)) {
             int pontosObtidos = item.coletar();
-        }
+            jogador.adicionarPontos(pontosObtidos);
+}
     }
 }
 
