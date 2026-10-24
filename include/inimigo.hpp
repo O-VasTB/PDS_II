@@ -97,6 +97,9 @@ public:
      */
     bool estaAndando() const;
 
+    bool foiPontuado() const;
+    void marcarPontuado();
+
     /** @brief Retorna o tipo de inimigo (Goomba, Koopa). */
     TipoInimigo getTipoInimigo() const;
 
@@ -124,6 +127,7 @@ public:
 private:
     TipoInimigo _tipoInimigo;  /**< Variação do inimigo. */
     EstadoInimigo _estado;     /**< Estado atual. */
+    bool _pontuado; /**< Evita somar pontos múltiplas vezes enquanto esmagado. */
     int _direcao;              /**< -1 = esquerda, +1 = direita. */
     int _pontos;               /**< Pontos ao ser derrotado. */
     int _dano;                 /**< Dano causado ao jogador. */

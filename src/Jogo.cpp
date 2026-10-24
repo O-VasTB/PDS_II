@@ -1,9 +1,6 @@
 /**
  * @file Jogo.cpp
  * @brief Implementação da classe Jogo (loop principal e orquestração).
- *
- * Trechos marcados com TODO dependem de Jogador.hpp e mapa.hpp, que ainda
- * não têm os métodos necessários, ou dos caminhos reais dos arquivos.
  */
 
 #include "Jogo.hpp"
@@ -18,8 +15,8 @@ namespace {
     constexpr float JOGADOR_X_INICIAL = 50.0f;
     constexpr float JOGADOR_Y_INICIAL = 300.0f;
     constexpr float JOGADOR_VELOCIDADE = 200.0f;
-    // TODO(HUD): trocar pelo caminho real da fonte.
     const char* const CAMINHO_FONTE = "assets/fonte.ttf";
+    int _pontos;
 }
 
 Jogo::Jogo()
@@ -27,6 +24,9 @@ Jogo::Jogo()
       _rodando(true),
       _jogador(EntityType::Jogador, JOGADOR_X_INICIAL, JOGADOR_Y_INICIAL,
                JOGADOR_VELOCIDADE) {
+      _mapa.carregarMapa("fase1.txt", "");
+      _pontos = 0;
+      _vidas = 3;
 }
 
 EstadoJogo Jogo::getEstado() const {
@@ -68,13 +68,16 @@ void Jogo::inicializar() {
     _inimigos.clear();
     _itens.clear();
 
-    _hud.inicializarRecursos(CAMINHO_FONTE);
+    // --- RECARREGA O MAPA PARA RESTAURAR AS MOEDAS ---
+    _mapa.carregarMapa("fase1.txt", "");
 
-    // TODO(Mapa): trocar pelos caminhos reais dos arquivos da fase.
-    // _mapa.carregarMapa("assets/fase1.txt", "assets/tileset.png");
+    _hud.inicializarRecursos(CAMINHO_FONTE);
 
     _jogador = Jogador(EntityType::Jogador, JOGADOR_X_INICIAL,
                        JOGADOR_Y_INICIAL, JOGADOR_VELOCIDADE);
+
+    _vidas = 3;
+    _pontos = 0;
 
     // Inimigos: (x, y, tipo, limiteEsquerdo, limiteDireito)
     _inimigos.push_back(
@@ -82,14 +85,15 @@ void Jogo::inicializar() {
     _inimigos.push_back(
         Inimigo(600.0f, 300.0f, TipoInimigo::KOOPA, 550.0f, 750.0f));
 
-    // Itens: (x, y, tipo)
-    _itens.push_back(Item(200.0f, 280.0f, TipoItem::MOEDA));
-    _itens.push_back(Item(400.0f, 280.0f, TipoItem::COGUMELO));
+    // Configuração inicial da câmera
+    _camera.target = { _jogador.getPosition().x, _jogador.getPosition().y };
+    _camera.offset = { LARGURA_JANELA / 2.0f, ALTURA_JANELA / 2.0f };
+    _camera.rotation = 0.0f;
+    _camera.zoom = 1.0f;
 }
 
 void Jogo::processarEntrada() {
     _input.processarEntradas();
-
     switch (_estado) {
         case EstadoJogo::MENU:
             if (IsKeyPressed(KEY_ENTER)) {
@@ -105,7 +109,6 @@ void Jogo::processarEntrada() {
                 _jogador.pular();
             }
             {
-                // Movimento horizontal: desloca a posição pela velocidade.
                 Pos p = _jogador.getPosition();
                 float dt = GetFrameTime();
                 if (_input.isTeclaPressionada(KEY_RIGHT)) {
@@ -134,76 +137,130 @@ void Jogo::processarEntrada() {
 }
 
 void Jogo::atualizar(float dt) {
+    if (_estado != EstadoJogo::JOGANDO) return;
+
+    _jogador.atualizar(dt);
+
     for (Inimigo& inimigo : _inimigos) {
         inimigo.atualizar(dt);
+
+        // --- ADICIONA PONTOS AO ESMAGAR O INIMIGO ---
+        if (inimigo.getEstado() == EstadoInimigo::ESMAGADO && !inimigo.foiPontuado()) {
+            _pontos += inimigo.getPontos();
+            inimigo.marcarPontuado();
+        }
     }
+    
     for (Item& item : _itens) {
         item.atualizar(dt);
     }
 
+    int vidasAntes = _vidas;
+
+    // O GerenciadorColisao trata das colisões (inimigos, itens, mapa)
     _colisao.atualizar(_jogador, _inimigos, _itens, _mapa, dt);
+
+    _vidas = _jogador.getVidas();
+
+    // Se perdeu vida neste frame por causa do inimigo
+    if (_vidas < vidasAntes) {
+        if (_vidas > 0) {
+            _jogador.setPosition(64.0f, 100.0f); // Reposiciona para evitar dano contínuo
+        } else {
+            _vidas = 0;
+            setEstado(EstadoJogo::GAME_OVER);
+        }
+    }
+
+   // Verificação de moedas
+    int pontosGanhos = _mapa.verificarColetaMoeda(_jogador.getPosition().x, _jogador.getPosition().y, 
+                                                 _jogador.getLargura(), _jogador.getAltura());
+    if (pontosGanhos > 0) {
+        _pontos += pontosGanhos; 
+    }
+
+    // --- VERIFICAÇÃO DE VITÓRIA (BANDEIRA NO MAPA) ---
+    if (_mapa.verificarChegadaFim(_jogador.getPosition().x, _jogador.getPosition().y, 
+                                  _jogador.getLargura(), _jogador.getAltura())) {
+        setEstado(EstadoJogo::VITORIA);
+    }
 
     removerInativos();
 
-    _hud.atualizarDados(_jogador.getVidas(), 0, _jogador.getPontuacao());
+// --- ATUALIZAÇÃO DA CÂMERA ---
+    _camera.target.x = std::max(400.0f, _jogador.getPosition().x); 
+    _camera.target.y = 100.0f; // Trava a câmera verticalmente no meio da tela (450 / 2)
 
-    if (_jogador.getVidas() <= 0) {
+    // --- VERIFICAÇÃO DE QUEDA (BURACO) ---
+    float alturaMaximaMapa = _mapa.getAltura() * 32.0f;
+
+    if (_jogador.getPosition().y > alturaMaximaMapa) {
+        _vidas--;                  
+        _jogador.setVidas(_vidas); 
+
+        if (_vidas > 0) {
+            _jogador.setPosition(64.0f, 100.0f); 
+        } else {
+            _vidas = 0;
+            setEstado(EstadoJogo::GAME_OVER);
+        }
+    }
+
+    if (_vidas <= 0) {
         setEstado(EstadoJogo::GAME_OVER);
     }
-    // TODO(Mapa): se o jogador chegou ao fim da fase,
-    // setEstado(EstadoJogo::VITORIA).
+
+    _hud.atualizarDados(_vidas, 0, _pontos);
+    
 }
 
 void Jogo::desenhar() {
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
-    switch (_estado) {
-        case EstadoJogo::MENU:
-            DrawText("MARIO", 330, 150, 40, DARKGRAY);
-            DrawText("Pressione ENTER para jogar", 260, 230, 20, GRAY);
-            break;
+    if (_estado == EstadoJogo::MENU) {
+        DrawText("MARIO", 330, 150, 40, DARKGRAY);
+        DrawText("Pressione ENTER para jogar", 260, 230, 20, GRAY);
+    }
+    else if (_estado == EstadoJogo::GAME_OVER) {
+        DrawText("GAME OVER", 300, 180, 40, RED);
+        DrawText("Pressione ENTER para reiniciar", 240, 240, 20, GRAY);
+    }
+    else if (_estado == EstadoJogo::VITORIA) {
+        DrawText("VITORIA!", 320, 180, 40, DARKGREEN);
+        DrawText("Pressione ENTER para jogar de novo", 220, 240, 20, GRAY);
+    }
+    else if (_estado == EstadoJogo::JOGANDO || _estado == EstadoJogo::PAUSADO) {
+        BeginMode2D(_camera);
 
-       case EstadoJogo::JOGANDO:
-        case EstadoJogo::PAUSADO:
-            _mapa.desenharBlocosVisiveis(0.0f, 0.0f);
-            
-            // Desenha os inimigos (vermelho)
-            for (const Inimigo& inimigo : _inimigos) {
-                Pos p = inimigo.getPosition();
-                DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
-                              static_cast<int>(inimigo.getLargura()), static_cast<int>(inimigo.getAltura()), RED);
-            }
-            
-            // Desenha os itens (dourado)
-            for (const Item& item : _itens) {
-                Pos p = item.getPosition();
-                DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
-                              static_cast<int>(item.getLargura()), static_cast<int>(item.getAltura()), GOLD);
-            }
-            
-            // Desenha o jogador (azul)
-            {
-                Pos p = _jogador.getPosition();
-                DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
-                              static_cast<int>(_jogador.getLargura()), static_cast<int>(_jogador.getAltura()), BLUE);
-            }
+        _mapa.desenharBlocosVisiveis(0.0f, 0.0f);
+        
+        for (const Inimigo& inimigo : _inimigos) {
+            Pos p = inimigo.getPosition();
+            DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
+                          static_cast<int>(inimigo.getLargura()), static_cast<int>(inimigo.getAltura()), RED);
+        }
+        
+        for (const Item& item : _itens) {
+            Pos p = item.getPosition();
+            DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
+                          static_cast<int>(item.getLargura()), static_cast<int>(item.getAltura()), GOLD);
+        }
 
-            _hud.renderizar();
-            if (_estado == EstadoJogo::PAUSADO) {
-                DrawText("PAUSADO", 330, 200, 30, DARKGRAY);
-            }
-            break;
+        {
+            Pos p = _jogador.getPosition();
+            DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
+                          static_cast<int>(_jogador.getLargura()), static_cast<int>(_jogador.getAltura()), BLUE);
+        }
 
-        case EstadoJogo::GAME_OVER:
-            DrawText("GAME OVER", 300, 180, 40, RED);
-            DrawText("Pressione ENTER para reiniciar", 240, 240, 20, GRAY);
-            break;
+        EndMode2D();
 
-        case EstadoJogo::VITORIA:
-            DrawText("VITORIA!", 320, 180, 40, DARKGREEN);
-            DrawText("Pressione ENTER para jogar de novo", 220, 240, 20, GRAY);
-            break;
+        _hud.atualizarDados(_vidas, 0, _pontos);
+        _hud.renderizar();
+
+        if (_estado == EstadoJogo::PAUSADO) {
+            DrawText("PAUSADO", 330, 200, 30, DARKGRAY);
+        }
     }
 
     EndDrawing();

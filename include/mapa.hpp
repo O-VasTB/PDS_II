@@ -50,6 +50,9 @@ class Mapa {
      */
     bool carregarMapa(const std::string& caminhoDados, const std::string& caminhoImagem);
 
+    int verificarColetaMoeda(float jogadorX, float jogadorY, float jogadorLargura, float jogadorAltura);
+    bool verificarChegadaFim(float jogadorX, float jogadorY, float jogadorLargura, float jogadorAltura);
+
     /**
      * @brief Desenha na tela apenas os blocos que estão visíveis dentro da câmera atual.
      * @param cameraX Posição X atual da câmera no mundo.
@@ -76,6 +79,10 @@ class Mapa {
      * @return Altura da fase.
      */
     int getAltura() const;
+
+    const Bloco& getBloco(int linha, int coluna) const {
+    return matrizBlocos[linha][coluna];
+}
 };
 
 #endif // MAPA_HPP

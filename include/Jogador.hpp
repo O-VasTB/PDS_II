@@ -10,8 +10,16 @@ class Jogador : public EntityData {
 private:
     int vidas;         /**< Quantidade de vidas restantes do jogador. */
     int pontuacao;     /**< Pontuação acumulada. */
+    float _velY;       /**< Velocidade vertical atual (para a gravidade e pulo). */
+    bool _noChao;      /**< Indica se o jogador está no chão (para permitir pulo). */
 
 public:
+
+    void setNoChao(bool chao);
+    bool getNoChao() const;
+    void pararQueda() { _velY = 0.0f; } // Zera a velocidade vertical
+    void setVidas(int vidas);
+
     /**
      * @brief Construtor da classe Jogador.
      * @param type Tipo da entidade.
@@ -20,6 +28,12 @@ public:
      * @param speed Velocidade inicial.
      */
     Jogador(EntityType type, float x = 0.0f, float y = 0.0f, float speed = 0.0f);
+
+    /**
+     * @brief Atualiza a física vertical e a posição do jogador a cada frame.
+     * @param dt Tempo decorrido desde o último frame (Delta Time).
+     */
+    void atualizar(float dt);
 
     /**
      * @brief Executa a ação de pulo do jogador.

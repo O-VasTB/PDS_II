@@ -67,6 +67,9 @@ public:
     void encerrar();
  
 private:
+    int _vidas;
+    int _pontos;
+    Camera2D _camera;
     EstadoJogo _estado;               /**< Estado atual. */
     bool _rodando;                    /**< true enquanto o loop deve continuar. */
  

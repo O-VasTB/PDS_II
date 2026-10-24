@@ -12,6 +12,20 @@ void GerenciadorInput::processarEntradas() {
 }
 
 bool GerenciadorInput::isTeclaPressionada(int codigoTecla) const {
-    // Utiliza a função IsKeyDown da Raylib para verificar se a tecla está pressionada
+    // Mapeamento expandido para aceitar tanto as Setas quanto o WASD / Espaço
+    if (codigoTecla == KEY_LEFT || codigoTecla == 'A') {
+        return IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
+    }
+    if (codigoTecla == KEY_RIGHT || codigoTecla == 'D') {
+        return IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
+    }
+    if (codigoTecla == KEY_UP || codigoTecla == 'W' || codigoTecla == KEY_SPACE) {
+        return IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) || IsKeyDown(KEY_SPACE);
+    }
+    if (codigoTecla == KEY_DOWN || codigoTecla == 'S') {
+        return IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S);
+    }
+
+    // Para qualquer outra tecla genérica
     return IsKeyDown(codigoTecla);
 }

@@ -29,6 +29,7 @@
  */
 class GerenciadorColisao {
 public:
+
     /**
      * @brief Verifica se duas caixas de colisão se sobrepõem.
      * @param a Primeira caixa.
@@ -44,18 +45,12 @@ public:
      */
     void aplicarGravidade(EntityData& entidade, float dt) const;
  
-    /**
-     * @brief Impede que a entidade atravesse chão e paredes do mapa.
-     *
-     * Corrige a posição e zera a velocidade no eixo da colisão. Quando um
-     * Inimigo bate numa parede, chama inverterDirecao().
-     *
-     * @param entidade Entidade a ser corrigida.
-     * @param mapa Mapa com os blocos sólidos.
-     * @return true se houve colisão com algum bloco.
-     */
+   // Versão exclusiva para o Jogador
+    bool resolverColisaoComMapa(Jogador& jogador, const Mapa& mapa) const;
+
+    // Versão genérica para os Inimigos (EntityData)
     bool resolverColisaoComMapa(EntityData& entidade, const Mapa& mapa) const;
- 
+    
     /**
      * @brief Trata colisões entre o jogador e os inimigos.
      *
