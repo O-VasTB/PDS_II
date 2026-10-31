@@ -10,7 +10,8 @@
  
 #ifndef JOGO_HPP
 #define JOGO_HPP
- 
+
+#include <iostream>
 #include <vector>
 #include <raylib.h>
  
