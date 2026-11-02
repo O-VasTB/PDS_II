@@ -5,29 +5,61 @@
 
 #include "Item.hpp"
 
-Item::Item(float x, float y, int valorPontos) 
-    : posX(x), posY(y), valor(valorPontos), coletado(false) {
+int Item::pontosPorTipo(TipoItem tipo) {
+    switch (tipo) {
+        case TipoItem::MOEDA: return 10;
+        case TipoItem::COGUMELO: return 1000;
+        case TipoItem::ESTRELA: return 1000;
+        default: return 10;
+    }
+}
+
+Item::Item(float x, float y, TipoItem tipo)
+    : EntityData(EntityType::Item, x, y, 0.0f),
+      _tipoItem(tipo),
+      _pontos(pontosPorTipo(tipo)),
+      _coletado(false),
+      _largura(24.0f),
+      _altura(24.0f),
+      _tempoAnimacao(0.0f)
+{
+    // posX e posY já foram inicializados pelo EntityData
+}
+
+void Item::atualizar(float dt) {
+    if (!_coletado) {
+        _tempoAnimacao += dt;
+    }
 }
 
 int Item::coletar() {
-    if (!coletado) {
-        coletado = true;
-        return valor; // Retorna os pontos que o item vale
+    if (!_coletado) {
+        _coletado = true;
+        return _pontos; // Retorna os pontos correspondentes ao tipo do item
     }
     return 0; // Já foi coletado, não pontua novamente
 }
 
-bool Item::isColetado() const {
-    return coletado;
+TipoItem Item::getTipoItem() const {
+    return _tipoItem;
 }
 
-Rectangle Item::getBounds() const {
-    return { posX, posY, 24.0f, 24.0f }; // Tamanho padrão da caixa de colisão do item
+bool Item::foiColetado() const {
+    return _coletado;
 }
 
-void Item::desenhar() const {
-    if (!coletado) {
-        // Desenha um item simples (ex: quadrado amarelo representando uma moeda)
-        DrawRectangle(static_cast<int>(posX), static_cast<int>(posY), 24, 24, GOLD);
-    }
+int Item::getPontos() const {
+    return _pontos;
+}
+
+float Item::getLargura() const {
+    return _largura;
+}
+
+float Item::getAltura() const {
+    return _altura;
+}
+
+float Item::getTempoAnimacao() const {
+    return _tempoAnimacao;
 }

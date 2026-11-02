@@ -1,6 +1,11 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
+
+#include <iostream>
+#include <vector>
+#include <raylib.h>
+
 /**
  * @file entity.hpp
  * @brief Definição da estrutura de dados base e da classe abstrata de entidades.
@@ -20,7 +25,7 @@ enum class EntityType {
     Jogador, /**< Entidade do jogador principal. */
     Tiro,    /**< Entidade de tiro disparado pelo jogador. */
     Inimigo, /**< Entidade de inimigo no mapa. */
-    Moeda    /**< Entidade colecionável de moeda. */
+    Item    /**< Entidade de colecionáveis. */
 };
 
 /**
@@ -28,8 +33,8 @@ enum class EntityType {
  * @brief Estrutura bidimensional para coordenadas no espaço 2D.
  */
 struct Pos {
-    double x; /**< Posição no eixo horizontal X. */
-    double y; /**< Posição no eixo vertical Y. */
+    float x; /**< Posição no eixo horizontal X. */
+    float y; /**< Posição no eixo vertical Y. */
 };
 
 /**

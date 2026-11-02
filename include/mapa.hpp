@@ -2,75 +2,32 @@
 #define MAPA_H
 
 #include <string>
-#include <vector>
-#include <raylib.h>
-#include "entity_data.hpp"
+#include <raylib.h> 
 
-/**
- * @file mapa.hpp
- * @brief Contrato da classe Mapa, responsável pelo cenário (chão, plataformas, bandeira)
- *        e pelos pontos de surgimento das entidades.
- *
- * O mapa é lido de um arquivo de texto, em que cada caractere representa um tile:
- *
- * | Símbolo | Significado                         |
- * |---------|-------------------------------------|
- * | '.'     | Espaço vazio                        |
- * | '#'     | Chão (sólido)                       |
- * | '='     | Plataforma (sólida)                 |
- * | 'F'     | Bandeira de fim de fase             |
- * | '@'     | Ponto de partida do jogador         |
- * | 'g'     | Spawn de Goomba                     |
- * | 'k'     | Spawn de Koopa                      |
- * | 'o'     | Spawn de Moeda                      |
- * | 'm'     | Spawn de Cogumelo                   |
- * | 's'     | Spawn de Estrela                    |
- *
- * Todas as linhas do arquivo devem ter o mesmo comprimento.
+/** 
+ * @brief Estrutura que representa um bloco individual no mapa.
+ * 
+ * Armazena as propriedades físicas de cada bloco (sólido, destrutível, transponivel)
  */
-
-/**
- * @enum TipoTile
- * @brief Tipos de tile que compõem o cenário.
- */
-enum class TipoTile {
-    Vazio,      /**< Espaço sem colisão. */
-    Chao,       /**< Chão sólido. */
-    Plataforma, /**< Plataforma sólida. */
-    Bandeira    /**< Bandeira que encerra a fase ao ser tocada. */
+struct Bloco {
+    bool solido; /**< Indica se o bloco bloqueia a passagem (parede, chão) */
+    bool destrutivel; /**< Indica se o bloco pode ser quebrado (ex: tijolo) */
+    bool transponivel; /**< Indica se o jogador pode passar por ele */
+    int tipo; /**< Identificador do tipo visual do bloco para recorte no tileset (ex: chão, canos, bloco '?') */
 };
 
 /**
- * @struct SpawnEntidade
- * @brief Ponto de surgimento de uma entidade, lido do arquivo do mapa.
- */
-struct SpawnEntidade {
-    char simbolo; /**< Símbolo que identifica a entidade ('g', 'k', 'o', 'm' ou 's'). */
-    Pos posicao;  /**< Posição inicial, em pixels, no canto superior esquerdo do tile. */
-};
-
-/**
- * @class Mapa
- * @brief Representa o cenário da fase atual.
- *
- * Carrega a grade de tiles de um arquivo, responde a consultas de colisão com o
- * cenário, desenha os tiles visíveis e informa onde cada entidade deve surgir.
+ * @brief Classe responsável por gerenciar o cenário do jogo.
+ * 
+ * Esta classe carrega a estrutura da fase, lida com a matriz de blocos e renderiza os visíveis usando a Raylib. 
  */
 class Mapa {
-public:
-    /**
-     * @brief Construtor padrão: cria um mapa vazio (nenhum arquivo carregado).
-     */
-    Mapa();
+    private:
+    std::vector<std::vector<Bloco>> matrizBlocos; /**< Matriz bidimensional que compõe a estrutura da fase */
+    int largura; /**< Limite de largura da fase em blocos ou pixels */
+    int altura; /**< Limite de altura da fase em blocos ou pixels */  
 
-    /**
-     * @brief Carrega o mapa a partir de um arquivo de texto, substituindo o atual.
-     * @param caminho Caminho do arquivo da fase.
-     * @throw std::runtime_error Se o arquivo não puder ser aberto ou estiver vazio.
-     * @throw std::invalid_argument Se houver linhas de tamanhos diferentes, símbolo
-     *        desconhecido ou ausência do ponto de partida do jogador ('@').
-     */
-    void carregarDeArquivo(const std::string& caminho);
+    Texture2D tileset; /**< Textura da Raylib que contém os sprites de todos os blocos do mapa */
 
     /**
      * @brief Desenha os tiles visíveis pela câmera.
@@ -79,21 +36,21 @@ public:
     void desenhar(const Camera2D& camera) const;
 
     /**
-     * @brief Obtém o tipo do tile em uma posição da grade.
-     * @param coluna Coluna do tile.
-     * @param linha Linha do tile.
-     * @return TipoTile Tipo do tile; Vazio se a posição estiver fora do mapa.
+     * @brief Destrutor da classe Mapa.
+     * Responsável por descarregar a textura do tileset para evitar vazamento de memória.
      */
     TipoTile getTile(int coluna, int linha) const;
 
     /**
-     * @brief Verifica se o tile em uma posição da grade é sólido.
-     * @param coluna Coluna do tile.
-     * @param linha Linha do tile.
-     * @return true Se for Chão ou Plataforma.
-     * @return false Caso contrário.
+     * @brief Carrega a estrutura e matriz de blocos, além da imagem (tileset) do mapa. 
+     * @param caminhoDados Caminho para o arquivo contendo a matriz de configuração
+     * @param caminhoImagem Caminho para a imagem PNG/BMP que será carregada no tileset.
+     * @return true se carregou com sucesso, false caso contrário.
      */
     bool ehSolido(int coluna, int linha) const;
+
+    int verificarColetaMoeda(float jogadorX, float jogadorY, float jogadorLargura, float jogadorAltura);
+    bool verificarChegadaFim(float jogadorX, float jogadorY, float jogadorLargura, float jogadorAltura);
 
     /**
      * @brief Verifica se um retângulo colide com algum tile sólido.
@@ -104,82 +61,28 @@ public:
     bool colideComSolido(const Rectangle& area) const;
 
     /**
-     * @brief Obtém os retângulos dos tiles sólidos que tocam uma região.
-     * @param area Região, em pixels, a ser consultada.
-     * @return std::vector<Rectangle> Retângulos dos tiles sólidos que intersectam a região.
+     * @brief Altera o estado de blocos atingidos.
+     * Pode ser utilizado para quebrar um tijolo ou ativar um bloco '?'.
+     * @param x Índice X do bloco na matriz.
+     * @param y Índice Y do bloco na matriz.
      */
     std::vector<Rectangle> getTilesSolidosProximos(const Rectangle& area) const;
 
     /**
-     * @brief Verifica se um retângulo toca a bandeira de fim de fase.
-     * @param area Retângulo, em pixels, a ser testado.
-     * @return true Se tocar algum tile Bandeira.
-     * @return false Caso contrário.
+     * @brief Retorna a largura total da fase.
+     * @return Largura da fase.
      */
     bool tocaBandeira(const Rectangle& area) const;
 
     /**
-     * @brief Informa se um mapa já foi carregado com sucesso.
-     * @return true Se há um mapa carregado.
-     * @return false Caso contrário.
+     * @brief Retorna a altura total da fase.
+     * @return Altura da fase.
      */
-    bool estaCarregado() const;
+    int getAltura() const;
 
-    /**
-     * @brief Obtém o tamanho do lado de cada tile.
-     * @return float Tamanho do tile, em pixels.
-     */
-    float getTamanhoTile() const;
-
-    /**
-     * @brief Obtém a largura do mapa em tiles.
-     * @return int Número de colunas.
-     */
-    int getColunas() const;
-
-    /**
-     * @brief Obtém a altura do mapa em tiles.
-     * @return int Número de linhas.
-     */
-    int getLinhas() const;
-
-    /**
-     * @brief Obtém a largura total do mapa.
-     * @return float Largura em pixels.
-     */
-    float getLarguraPx() const;
-
-    /**
-     * @brief Obtém a altura total do mapa.
-     * @return float Altura em pixels.
-     */
-    float getAlturaPx() const;
-
-    /**
-     * @brief Obtém o ponto de partida do jogador.
-     * @return Pos Posição inicial do jogador, em pixels.
-     */
-    Pos getSpawnJogador() const;
-
-    /**
-     * @brief Obtém os pontos de surgimento de inimigos e itens.
-     * @return const std::vector<SpawnEntidade>& Lista de spawns lidos do arquivo.
-     */
-    const std::vector<SpawnEntidade>& getSpawns() const;
-
-private:
-    /**
-     * @brief Limpa a grade e todos os dados do mapa atual.
-     */
-    void limpar();
-
-    std::vector<std::vector<TipoTile> > _tiles; /**< Grade de tiles, indexada por [linha][coluna]. */
-    int _colunas;                               /**< Número de colunas da grade. */
-    int _linhas;                                /**< Número de linhas da grade. */
-    float _tamanhoTile;                         /**< Tamanho do lado de cada tile, em pixels. */
-    Pos _spawnJogador;                          /**< Ponto de partida do jogador. */
-    std::vector<SpawnEntidade> _spawns;         /**< Pontos de surgimento de inimigos e itens. */
-    bool _carregado;                            /**< Indica se há um mapa carregado. */
+    const Bloco& getBloco(int linha, int coluna) const {
+    return matrizBlocos[linha][coluna];
+}
 };
 
-#endif
+#endif // MAPA_HPP

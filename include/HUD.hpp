@@ -2,24 +2,21 @@
 #define HUD_HPP
 
 #include <string>
-#include <allegro5/allegro.h>
-#include <allegro5/allegro_font.h> // Para desenhar textos
-#include <allegro5/allegro_ttf.h>  // Para usar fontes .ttf (TrueType)
-
+#include <raylib.h> 
 /**
  * @brief Classe responsável por exibir as informações de interface (HUD) para o jogador.
  * 
- * Lida com a renderização fixa na tela, mostrando vidas, moedas e pontuação[cite: 1, 3].
+ * Lida com a renderização fixa na tela, mostrando vidas, moedas e pontuação.
  */
 class HUD {
 private:
-    int vidas;     /**< Quantidade atual de vidas do jogador[cite: 1] */
-    int moedas;    /**< Quantidade de moedas coletadas[cite: 1] */
-    int pontuacao; /**< Pontuação atual obtida[cite: 1] */
+    int vidas;     /**< Quantidade atual de vidas do jogador */
+    int moedas;    /**< Quantidade de moedas coletadas */
+    int pontuacao; /**< Pontuação atual obtida */
 
-    ALLEGRO_FONT* fonteHUD;       /**< Ponteiro para a fonte usada na renderização dos textos */
-    ALLEGRO_BITMAP* iconeVida;    /**< Ponteiro opcional para um ícone ilustrativo de vida */
-    ALLEGRO_BITMAP* iconeMoeda;   /**< Ponteiro opcional para um ícone ilustrativo de moeda */
+    Font fonteHUD;         /**< Estrutura de fonte do Raylib */
+    Texture2D iconeVida;   /**< Textura do ícone de vida no Raylib */
+    Texture2D iconeMoeda;  /**< Textura do ícone de moeda no Raylib */
 
 public:
     /**
@@ -29,13 +26,13 @@ public:
 
     /**
      * @brief Destrutor da classe HUD.
-     * Responsável por liberar a memória da fonte (al_destroy_font) e dos bitmaps (al_destroy_bitmap).
+     * Responsável por descarregar os recursos da Raylib.
      */
     ~HUD();
 
     /**
      * @brief Inicializa e carrega a fonte e as imagens necessárias para o HUD.
-     * @param caminhoFonte Caminho do arquivo .ttf a ser carregado.
+     * @param caminhoFonte Caminho do arquivo de fonte a ser carregado.
      * @return true se os recursos foram carregados com sucesso, false caso contrário.
      */
     bool inicializarRecursos(const std::string& caminhoFonte);
@@ -50,7 +47,6 @@ public:
 
     /**
      * @brief Renderiza os elementos do HUD (textos e ícones) na tela.
-     * Como o HUD lida com elementos fixos na tela[cite: 3], o desenho independe da posição da câmera.
      */
     void renderizar() const;
 };
