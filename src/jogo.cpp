@@ -1,284 +1,498 @@
-/**
- * @file Jogo.cpp
- * @brief Implementação da classe Jogo (loop principal e orquestração).
- */
-
-#include "Jogo.hpp"
-
 #include <algorithm>
-#include <raylib.h>
+#include <cmath>
+#include <exception>
+#include <fstream>
+#include <stdexcept>
+#include <string>
+#include "jogo.hpp"
 
 namespace {
-    constexpr int LARGURA_JANELA = 800;
-    constexpr int ALTURA_JANELA = 450;
-    constexpr int FPS = 60;
-    constexpr float JOGADOR_X_INICIAL = 50.0f;
-    constexpr float JOGADOR_Y_INICIAL = 300.0f;
-    constexpr float JOGADOR_VELOCIDADE = 200.0f;
-    const char* const CAMINHO_FONTE = "assets/fonte.ttf";
-    int _pontos;
+const char* const kArquivoRecorde = "data/recorde.txt"; /**< Arquivo de persistência do recorde. */
+const char* const kPrefixoFase = "data/fase";           /**< Prefixo dos arquivos de fase (faseN.txt). */
+const float kPassoMaximo = 1.0f / 30.0f;  /**< Maior passo de tempo por quadro (evita "teleportes"). */
+const float kVelocidadeJogador = 220.0f;  /**< Velocidade horizontal do jogador, em pixels/s. */
+const float kVelocidadeGoomba = 70.0f;    /**< Velocidade de patrulha do Goomba. */
+const float kVelocidadeKoopa = 55.0f;     /**< Velocidade de patrulha do Koopa. */
+const float kVelocidadeCogumelo = 60.0f;  /**< Velocidade do cogumelo. */
+const float kVelocidadeEstrela = 90.0f;   /**< Velocidade horizontal da estrela. */
+const float kInvencibilidadeRenascer = 2.0f; /**< Invencibilidade ao renascer, em segundos. */
+const int kBonusPorSegundo = 10;          /**< Pontos por segundo restante ao concluir a fase. */
+const int kOpcoesMenu = 2;                /**< Quantidade de opções do menu principal. */
+
+/** Última mensagem de erro (ex.: fase inválida), exibida no menu principal. */
+std::string g_mensagemErro;
+
+/** @brief Tempo do último quadro, limitado para manter a física estável. */
+float passoDeTempo() {
+    return std::min(GetFrameTime(), kPassoMaximo);
 }
 
-Jogo::Jogo()
-    : _estado(EstadoJogo::MENU),
-      _rodando(true),
-      _jogador(EntityType::Jogador, JOGADOR_X_INICIAL, JOGADOR_Y_INICIAL,
-               JOGADOR_VELOCIDADE) {
-      _mapa.carregarMapa("fase1.txt", "");
-      _pontos = 0;
-      _vidas = 3;
+/**
+ * @brief Posiciona uma entidade sobre o tile de spawn: centralizada na horizontal e com os
+ *        pés alinhados à base do tile.
+ */
+template <typename T>
+void posicionarNoTile(T& entidade, const Pos& spawn, float tile) {
+    const Rectangle hb = entidade.getHitbox();
+    entidade.setPosition(spawn.x + (tile - hb.width) / 2.0f, spawn.y + tile - hb.height);
+}
+
+/**
+ * @brief Tira uma vida do jogador de forma definitiva (queda em buraco ou tempo esgotado).
+ *
+ * Remove antes qualquer invencibilidade; no estado Grande são necessárias duas chamadas
+ * a levarDano() (a primeira só encolhe o jogador).
+ */
+void matarJogador(Jogador& jogador) {
+    for (int i = 0; i < 2 && jogador.confereVivo(); ++i) {
+        jogador.ativarInvencibilidade(0.0f);
+        jogador.levarDano();
+    }
+}
+}  // namespace
+
+Jogo::Jogo(int largura, int altura, const std::string& titulo)
+    : _largura(largura),
+      _altura(altura),
+      _estado(EstadoJogo::MenuPrincipal),
+      _deveSair(false),
+      _opcaoMenu(0),
+      _faseAtual(1),
+      _totalFases(1),
+      _recorde(0),
+      _tempoRestante(0.0f),
+      _tempoLimiteFase(200.0f),
+      _gravidade(1500.0f),
+      _camera(),
+      _mapa(),
+      _hud(largura, altura),
+      _colisao(),
+      _input() {
+    if (largura <= 0 || altura <= 0) {
+        throw std::invalid_argument("Dimensoes da janela devem ser positivas");
+    }
+
+    InitWindow(largura, altura, titulo.c_str());
+    if (!IsWindowReady()) {
+        throw std::runtime_error("Falha ao criar a janela do jogo");
+    }
+    SetTargetFPS(60);
+
+    _camera.offset = Vector2{largura / 2.0f, altura / 2.0f};
+    _camera.target = Vector2{largura / 2.0f, altura / 2.0f};
+    _camera.rotation = 0.0f;
+    _camera.zoom = 1.0f;
+
+    // Descobre quantas fases existem: data/fase1.txt, data/fase2.txt, ...
+    while (std::ifstream(caminhoFase(_totalFases + 1).c_str()).good()) {
+        ++_totalFases;
+    }
+
+    carregarRecorde();
+}
+
+Jogo::~Jogo() {
+    salvarRecorde();
+    CloseWindow();
 }
 
 EstadoJogo Jogo::getEstado() const {
     return _estado;
 }
 
-void Jogo::setEstado(EstadoJogo novoEstado) {
-    _estado = novoEstado;
-}
-
-bool Jogo::estaRodando() const {
-    return _rodando;
-}
-
-void Jogo::encerrar() {
-    _rodando = false;
-}
-
 void Jogo::executar() {
-    InitWindow(LARGURA_JANELA, ALTURA_JANELA, "Mario");
-    SetTargetFPS(FPS);
-
-    inicializar();
-
-    while (_rodando && !WindowShouldClose()) {
-        float dt = GetFrameTime();
-
+    while (!_deveSair && !WindowShouldClose()) {
         processarEntrada();
-        if (_estado == EstadoJogo::JOGANDO) {
-            atualizar(dt);
-        }
+        atualizar(passoDeTempo());
         desenhar();
     }
-
-    CloseWindow();
 }
 
-void Jogo::inicializar() {
+/* ========================================================================== */
+/*                                  PARTIDA                                   */
+/* ========================================================================== */
+
+void Jogo::iniciarNovaPartida() {
+    g_mensagemErro.clear();
+    _jogador.reset();  // um novo Jogador é criado em instanciarEntidades()
+    try {
+        carregarFase(1);
+        _estado = EstadoJogo::Jogando;
+    } catch (const std::exception& e) {
+        g_mensagemErro = e.what();
+        TraceLog(LOG_ERROR, "Falha ao iniciar a partida: %s", e.what());
+        _jogador.reset();
+        _estado = EstadoJogo::MenuPrincipal;
+    }
+}
+
+void Jogo::carregarFase(int fase) {
+    if (fase < 1 || fase > _totalFases) {
+        throw std::invalid_argument("Fase inexistente: " + std::to_string(fase));
+    }
+    _mapa.carregarDeArquivo(caminhoFase(fase));  // lança exceção se o arquivo for inválido
+    _faseAtual = fase;
+    _tempoRestante = _tempoLimiteFase;
+    instanciarEntidades();
+    atualizarCamera();
+}
+
+void Jogo::instanciarEntidades() {
     _inimigos.clear();
     _itens.clear();
+    _tiros.clear();
 
-    // --- RECARREGA O MAPA PARA RESTAURAR AS MOEDAS ---
-    _mapa.carregarMapa("fase1.txt", "");
+    const float tile = _mapa.getTamanhoTile();
 
-    _hud.inicializarRecursos(CAMINHO_FONTE);
+    // O jogador é criado uma única vez por partida; nas demais fases/renascimentos
+    // ele apenas é reposicionado, mantendo vidas, moedas, pontos e estado de poder.
+    if (!_jogador) {
+        _jogador.reset(new Jogador(0.0f, 0.0f, kVelocidadeJogador));
+    }
+    posicionarNoTile(*_jogador, _mapa.getSpawnJogador(), tile);
+    _jogador->setVelY(0.0f);
+    _jogador->setNoChao(false);
+    _jogador->setAlive(true);
 
-    _jogador = Jogador(EntityType::Jogador, JOGADOR_X_INICIAL,
-                       JOGADOR_Y_INICIAL, JOGADOR_VELOCIDADE);
+    const std::vector<SpawnEntidade>& spawns = _mapa.getSpawns();
+    for (std::size_t i = 0; i < spawns.size(); ++i) {
+        const SpawnEntidade& sp = spawns[i];
+        switch (sp.simbolo) {
+            case 'g': {
+                std::unique_ptr<Inimigo> e(new Inimigo(0.0f, 0.0f, kVelocidadeGoomba, TipoInimigo::Goomba));
+                posicionarNoTile(*e, sp.posicao, tile);
+                _inimigos.push_back(std::move(e));
+                break;
+            }
+            case 'k': {
+                std::unique_ptr<Inimigo> e(new Inimigo(0.0f, 0.0f, kVelocidadeKoopa, TipoInimigo::Koopa));
+                posicionarNoTile(*e, sp.posicao, tile);
+                _inimigos.push_back(std::move(e));
+                break;
+            }
+            case 'o': {
+                std::unique_ptr<Item> it(new Moeda(0.0f, 0.0f));
+                posicionarNoTile(*it, sp.posicao, tile);
+                _itens.push_back(std::move(it));
+                break;
+            }
+            case 'm': {
+                std::unique_ptr<Item> it(new Cogumelo(0.0f, 0.0f, kVelocidadeCogumelo));
+                posicionarNoTile(*it, sp.posicao, tile);
+                _itens.push_back(std::move(it));
+                break;
+            }
+            case 's': {
+                std::unique_ptr<Item> it(new Estrela(0.0f, 0.0f, kVelocidadeEstrela));
+                posicionarNoTile(*it, sp.posicao, tile);
+                _itens.push_back(std::move(it));
+                break;
+            }
+            default:
+                break;  // o Mapa já garante que só chegam símbolos conhecidos
+        }
+    }
+}
 
-    _vidas = 3;
-    _pontos = 0;
-
-    // Inimigos: (x, y, tipo, limiteEsquerdo, limiteDireito)
-    _inimigos.push_back(
-        Inimigo(300.0f, 300.0f, TipoInimigo::GOOMBA, 250.0f, 450.0f));
-    _inimigos.push_back(
-        Inimigo(600.0f, 300.0f, TipoInimigo::KOOPA, 550.0f, 750.0f));
-
-    // Configuração inicial da câmera
-    _camera.target = { _jogador.getPosition().x, _jogador.getPosition().y };
-    _camera.offset = { LARGURA_JANELA / 2.0f, ALTURA_JANELA / 2.0f };
-    _camera.rotation = 0.0f;
-    _camera.zoom = 1.0f;
+std::string Jogo::caminhoFase(int fase) const {
+    return std::string(kPrefixoFase) + std::to_string(fase) + ".txt";
 }
 
 void Jogo::processarEntrada() {
-    _input.processarEntradas();
     switch (_estado) {
-        case EstadoJogo::MENU:
-            if (IsKeyPressed(KEY_ENTER)) {
-                setEstado(EstadoJogo::JOGANDO);
+        case EstadoJogo::MenuPrincipal: {
+            if (_input.acaoAcionada(Acao::Cima)) {
+                _opcaoMenu = (_opcaoMenu + kOpcoesMenu - 1) % kOpcoesMenu;
             }
-            break;
-
-        case EstadoJogo::JOGANDO:
-            if (IsKeyPressed(KEY_P)) {
-                setEstado(EstadoJogo::PAUSADO);
+            if (_input.acaoAcionada(Acao::Baixo)) {
+                _opcaoMenu = (_opcaoMenu + 1) % kOpcoesMenu;
             }
-            if (IsKeyPressed(KEY_SPACE)) {
-                _jogador.pular();
-            }
-            {
-                Pos p = _jogador.getPosition();
-                float dt = GetFrameTime();
-                if (_input.isTeclaPressionada(KEY_RIGHT)) {
-                    p.x += JOGADOR_VELOCIDADE * dt;
+            if (_input.acaoAcionada(Acao::Confirmar)) {
+                if (_opcaoMenu == 0) {
+                    iniciarNovaPartida();
+                } else {
+                    _deveSair = true;
                 }
-                if (_input.isTeclaPressionada(KEY_LEFT)) {
-                    p.x -= JOGADOR_VELOCIDADE * dt;
+            }
+            break;
+        }
+        case EstadoJogo::Jogando: {
+            if (_input.acaoAcionada(Acao::Pausar)) {
+                _estado = EstadoJogo::Pausado;
+                break;
+            }
+            if (!_jogador) {
+                break;
+            }
+            const float dt = passoDeTempo();
+            const bool esquerda = _input.acaoPressionada(Acao::Esquerda);
+            const bool direita = _input.acaoPressionada(Acao::Direita);
+            if (esquerda && !direita) {
+                _jogador->moverEsquerda(dt);
+            } else if (direita && !esquerda) {
+                _jogador->moverDireita(dt);
+            }
+            if (_input.acaoAcionada(Acao::Pular)) {
+                _jogador->pular();
+            }
+            if (_input.acaoAcionada(Acao::Atirar)) {
+                std::unique_ptr<Tiro> tiro = _jogador->atirar();
+                if (tiro) {
+                    _tiros.push_back(std::move(tiro));
                 }
-                _jogador.setPosition(p.x, p.y);
             }
             break;
-
-        case EstadoJogo::PAUSADO:
-            if (IsKeyPressed(KEY_P)) {
-                setEstado(EstadoJogo::JOGANDO);
+        }
+        case EstadoJogo::Pausado: {
+            if (_input.acaoAcionada(Acao::Pausar)) {
+                _estado = EstadoJogo::Jogando;
             }
             break;
-
-        case EstadoJogo::GAME_OVER:
-        case EstadoJogo::VITORIA:
-            if (IsKeyPressed(KEY_ENTER)) {
-                reiniciar();
+        }
+        case EstadoJogo::GameOver:
+        case EstadoJogo::Vitoria: {
+            if (_input.acaoAcionada(Acao::Confirmar)) {
+                _estado = EstadoJogo::MenuPrincipal;
+                _opcaoMenu = 0;
             }
             break;
+        }
     }
 }
 
 void Jogo::atualizar(float dt) {
-    if (_estado != EstadoJogo::JOGANDO) return;
-
-    _jogador.atualizar(dt);
-
-    for (Inimigo& inimigo : _inimigos) {
-        inimigo.atualizar(dt);
-
-        // --- ADICIONA PONTOS AO ESMAGAR O INIMIGO ---
-        if (inimigo.getEstado() == EstadoInimigo::ESMAGADO && !inimigo.foiPontuado()) {
-            _pontos += inimigo.getPontos();
-            inimigo.marcarPontuado();
-        }
+    if (_estado == EstadoJogo::Jogando) {
+        atualizarPartida(dt);
     }
-    
-    for (Item& item : _itens) {
-        item.atualizar(dt);
-    }
-
-    int vidasAntes = _vidas;
-
-    // O GerenciadorColisao trata das colisões (inimigos, itens, mapa)
-    _colisao.atualizar(_jogador, _inimigos, _itens, _mapa, dt);
-
-    _vidas = _jogador.getVidas();
-
-    // Se perdeu vida neste frame por causa do inimigo
-    if (_vidas < vidasAntes) {
-        if (_vidas > 0) {
-            _jogador.setPosition(64.0f, 100.0f); // Reposiciona para evitar dano contínuo
-        } else {
-            _vidas = 0;
-            setEstado(EstadoJogo::GAME_OVER);
-        }
-    }
-
-   // Verificação de moedas
-    int pontosGanhos = _mapa.verificarColetaMoeda(_jogador.getPosition().x, _jogador.getPosition().y, 
-                                                 _jogador.getLargura(), _jogador.getAltura());
-    if (pontosGanhos > 0) {
-        _pontos += pontosGanhos; 
-    }
-
-    // --- VERIFICAÇÃO DE VITÓRIA (BANDEIRA NO MAPA) ---
-    if (_mapa.verificarChegadaFim(_jogador.getPosition().x, _jogador.getPosition().y, 
-                                  _jogador.getLargura(), _jogador.getAltura())) {
-        setEstado(EstadoJogo::VITORIA);
-    }
-
-    removerInativos();
-
-// --- ATUALIZAÇÃO DA CÂMERA ---
-    _camera.target.x = std::max(400.0f, _jogador.getPosition().x); 
-    _camera.target.y = 100.0f; // Trava a câmera verticalmente no meio da tela (450 / 2)
-
-    // --- VERIFICAÇÃO DE QUEDA (BURACO) ---
-    float alturaMaximaMapa = _mapa.getAltura() * 32.0f;
-
-    if (_jogador.getPosition().y > alturaMaximaMapa) {
-        _vidas--;                  
-        _jogador.setVidas(_vidas); 
-
-        if (_vidas > 0) {
-            _jogador.setPosition(64.0f, 100.0f); 
-        } else {
-            _vidas = 0;
-            setEstado(EstadoJogo::GAME_OVER);
-        }
-    }
-
-    if (_vidas <= 0) {
-        setEstado(EstadoJogo::GAME_OVER);
-    }
-
-    _hud.atualizarDados(_vidas, 0, _pontos);
-    
 }
+
+void Jogo::atualizarPartida(float dt) {
+    if (!_jogador) {
+        return;
+    }
+
+    _tempoRestante -= dt;
+
+    // Física e movimento.
+    _jogador->atualizar(dt, _gravidade);
+    _colisao.resolverJogadorMapa(*_jogador, _mapa);
+
+    for (std::size_t i = 0; i < _inimigos.size(); ++i) {
+        _inimigos[i]->atualizar(dt);
+        _colisao.resolverInimigoMapa(*_inimigos[i], _mapa);
+    }
+    for (std::size_t i = 0; i < _itens.size(); ++i) {
+        _itens[i]->atualizar(dt);  // polimorfismo: cada item se move do seu jeito
+        _colisao.resolverItemMapa(*_itens[i], _mapa);
+    }
+    for (std::size_t i = 0; i < _tiros.size(); ++i) {
+        _tiros[i]->atualizar(dt);
+        if (_colisao.tiroBateuNoMapa(*_tiros[i], _mapa)) {
+            _tiros[i]->setAlive(false);
+        }
+    }
+
+    // Interações entre entidades.
+    _colisao.tratarJogadorInimigos(*_jogador, _inimigos);
+    _colisao.tratarJogadorItens(*_jogador, _itens);
+    _jogador->adicionarPontos(_colisao.tratarTirosInimigos(_tiros, _inimigos));
+    removerEntidadesInativas();
+
+    // Condições que custam uma vida: buraco e fim do tempo.
+    if (_colisao.jogadorCaiuDoMapa(*_jogador, _mapa) || _tempoRestante <= 0.0f) {
+        _tempoRestante = std::max(_tempoRestante, 0.0f);
+        matarJogador(*_jogador);
+    }
+
+    if (_jogador->getPontuacao() > _recorde) {
+        _recorde = _jogador->getPontuacao();
+    }
+
+    if (!_jogador->confereVivo()) {
+        tratarMorteDoJogador();
+        return;
+    }
+    if (_colisao.jogadorChegouAoFim(*_jogador, _mapa)) {
+        avancarFase();
+        return;
+    }
+    atualizarCamera();
+}
+
+void Jogo::removerEntidadesInativas() {
+    _inimigos.erase(std::remove_if(_inimigos.begin(), _inimigos.end(),
+                                   [](const std::unique_ptr<Inimigo>& e) { return !e->confereVivo(); }),
+                    _inimigos.end());
+    _itens.erase(std::remove_if(_itens.begin(), _itens.end(),
+                                [](const std::unique_ptr<Item>& e) { return !e->confereVivo(); }),
+                 _itens.end());
+    _tiros.erase(std::remove_if(_tiros.begin(), _tiros.end(),
+                                [](const std::unique_ptr<Tiro>& e) { return !e->confereVivo(); }),
+                 _tiros.end());
+}
+
+void Jogo::tratarMorteDoJogador() {
+    if (_jogador->getVidas() <= 0) {
+        _estado = EstadoJogo::GameOver;
+        salvarRecorde();
+        return;
+    }
+    // Ainda há vidas: recomeça a fase (inimigos e itens voltam ao lugar de origem).
+    _tempoRestante = _tempoLimiteFase;
+    instanciarEntidades();
+    _jogador->ativarInvencibilidade(kInvencibilidadeRenascer);
+    atualizarCamera();
+}
+
+void Jogo::avancarFase() {
+    // Bônus pelo tempo que sobrou.
+    _jogador->adicionarPontos(static_cast<int>(_tempoRestante) * kBonusPorSegundo);
+    if (_jogador->getPontuacao() > _recorde) {
+        _recorde = _jogador->getPontuacao();
+    }
+
+    if (_faseAtual >= _totalFases) {
+        _estado = EstadoJogo::Vitoria;
+        salvarRecorde();
+        return;
+    }
+    try {
+        carregarFase(_faseAtual + 1);
+    } catch (const std::exception& e) {
+        g_mensagemErro = e.what();
+        TraceLog(LOG_ERROR, "Falha ao carregar a proxima fase: %s", e.what());
+        _estado = EstadoJogo::MenuPrincipal;
+        salvarRecorde();
+    }
+}
+
+void Jogo::atualizarCamera() {
+    if (!_jogador) {
+        return;
+    }
+    const Rectangle hb = _jogador->getHitbox();
+    const float larguraTela = static_cast<float>(_largura);
+    const float alturaTela = static_cast<float>(_altura);
+    const float larguraMapa = _mapa.getLarguraPx();
+    const float alturaMapa = _mapa.getAlturaPx();
+
+    float cx = hb.x + hb.width / 2.0f;
+    float cy = hb.y + hb.height / 2.0f;
+
+    // Se o mapa for menor que a tela, centraliza; caso contrário, não mostra nada fora dele.
+    if (larguraMapa <= larguraTela) {
+        cx = larguraMapa / 2.0f;
+    } else {
+        cx = std::max(larguraTela / 2.0f, std::min(cx, larguraMapa - larguraTela / 2.0f));
+    }
+    if (alturaMapa <= alturaTela) {
+        cy = alturaMapa / 2.0f;
+    } else {
+        cy = std::max(alturaTela / 2.0f, std::min(cy, alturaMapa - alturaTela / 2.0f));
+    }
+
+    _camera.target = Vector2{std::floor(cx), std::floor(cy)};
+    _camera.offset = Vector2{larguraTela / 2.0f, alturaTela / 2.0f};
+    _camera.rotation = 0.0f;
+    _camera.zoom = 1.0f;
+}
+
+/* ========================================================================== */
+/*                                  DESENHO                                   */
+/* ========================================================================== */
 
 void Jogo::desenhar() {
     BeginDrawing();
-    ClearBackground(RAYWHITE);
+    ClearBackground(SKYBLUE);
 
-    if (_estado == EstadoJogo::MENU) {
-        DrawText("MARIO", 330, 150, 40, DARKGRAY);
-        DrawText("Pressione ENTER para jogar", 260, 230, 20, GRAY);
-    }
-    else if (_estado == EstadoJogo::GAME_OVER) {
-        DrawText("GAME OVER", 300, 180, 40, RED);
-        DrawText("Pressione ENTER para reiniciar", 240, 240, 20, GRAY);
-    }
-    else if (_estado == EstadoJogo::VITORIA) {
-        DrawText("VITORIA!", 320, 180, 40, DARKGREEN);
-        DrawText("Pressione ENTER para jogar de novo", 220, 240, 20, GRAY);
-    }
-    else if (_estado == EstadoJogo::JOGANDO || _estado == EstadoJogo::PAUSADO) {
-        BeginMode2D(_camera);
-
-        _mapa.desenharBlocosVisiveis(0.0f, 0.0f);
-        
-        for (const Inimigo& inimigo : _inimigos) {
-            Pos p = inimigo.getPosition();
-            DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
-                          static_cast<int>(inimigo.getLargura()), static_cast<int>(inimigo.getAltura()), RED);
+    if (_estado == EstadoJogo::MenuPrincipal) {
+        desenharMenu();
+    } else {
+        if (_jogador) {
+            _hud.atualizar(*_jogador, _tempoRestante, _faseAtual, _recorde);
         }
-        
-        for (const Item& item : _itens) {
-            Pos p = item.getPosition();
-            DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
-                          static_cast<int>(item.getLargura()), static_cast<int>(item.getAltura()), GOLD);
-        }
+        desenharMundo();
+        _hud.desenhar();
 
-        {
-            Pos p = _jogador.getPosition();
-            DrawRectangle(static_cast<int>(p.x), static_cast<int>(p.y), 
-                          static_cast<int>(_jogador.getLargura()), static_cast<int>(_jogador.getAltura()), BLUE);
-        }
-
-        EndMode2D();
-
-        _hud.atualizarDados(_vidas, 0, _pontos);
-        _hud.renderizar();
-
-        if (_estado == EstadoJogo::PAUSADO) {
-            DrawText("PAUSADO", 330, 200, 30, DARKGRAY);
+        if (_estado == EstadoJogo::Pausado) {
+            _hud.desenharMensagem("PAUSADO", "Pressione P para continuar");
+        } else if (_estado == EstadoJogo::GameOver) {
+            const int pontos = _jogador ? _jogador->getPontuacao() : 0;
+            _hud.desenharMensagem("FIM DE JOGO",
+                                  "Pontuacao: " + std::to_string(pontos) + "  -  ENTER para voltar ao menu");
+        } else if (_estado == EstadoJogo::Vitoria) {
+            const int pontos = _jogador ? _jogador->getPontuacao() : 0;
+            _hud.desenharMensagem("VOCE VENCEU!",
+                                  "Pontuacao: " + std::to_string(pontos) + "  -  ENTER para voltar ao menu");
         }
     }
-
     EndDrawing();
 }
 
-void Jogo::removerInativos() {
-    _inimigos.erase(
-        std::remove_if(_inimigos.begin(), _inimigos.end(),
-                       [](const Inimigo& i) { return !i.confereVivo(); }),
-        _inimigos.end());
+void Jogo::desenharMenu() const {
+    DrawRectangle(0, 0, _largura, _altura, DARKBLUE);
 
-    _itens.erase(
-        std::remove_if(_itens.begin(), _itens.end(),
-                       [](const Item& i) { return i.foiColetado(); }),
-        _itens.end());
+    const char* titulo = "SUPER PDS BROS";
+    const int fonteTitulo = 56;
+    DrawText(titulo, (_largura - MeasureText(titulo, fonteTitulo)) / 2, _altura / 5, fonteTitulo, WHITE);
+
+    const char* opcoes[kOpcoesMenu] = {"JOGAR", "SAIR"};
+    for (int i = 0; i < kOpcoesMenu; ++i) {
+        const bool selecionada = (i == _opcaoMenu);
+        const std::string texto = std::string(selecionada ? "> " : "  ") + opcoes[i];
+        const int fonte = 32;
+        DrawText(texto.c_str(), (_largura - MeasureText(texto.c_str(), fonte)) / 2,
+                 _altura / 2 + i * 50, fonte, selecionada ? YELLOW : LIGHTGRAY);
+    }
+
+    const std::string recorde = "RECORDE: " + std::to_string(_recorde);
+    DrawText(recorde.c_str(), (_largura - MeasureText(recorde.c_str(), 22)) / 2, _altura / 2 + 120, 22, GOLD);
+
+    const char* ajuda = "Setas: mover/navegar | ESPACO: pular | Z: atirar | P: pausar | ENTER: confirmar";
+    DrawText(ajuda, (_largura - MeasureText(ajuda, 16)) / 2, _altura - 60, 16, LIGHTGRAY);
+
+    if (!g_mensagemErro.empty()) {
+        DrawText(g_mensagemErro.c_str(), 20, _altura - 30, 16, RED);
+    }
 }
 
-void Jogo::reiniciar() {
-    inicializar();
-    setEstado(EstadoJogo::JOGANDO);
+void Jogo::desenharMundo() const {
+    BeginMode2D(_camera);
+    _mapa.desenhar(_camera);
+    for (std::size_t i = 0; i < _itens.size(); ++i) {
+        _itens[i]->desenhar();
+    }
+    for (std::size_t i = 0; i < _inimigos.size(); ++i) {
+        _inimigos[i]->desenhar();
+    }
+    for (std::size_t i = 0; i < _tiros.size(); ++i) {
+        _tiros[i]->desenhar();
+    }
+    if (_jogador) {
+        _jogador->desenhar();
+    }
+    EndMode2D();
+}
+
+/* ========================================================================== */
+/*                               PERSISTÊNCIA                                 */
+/* ========================================================================== */
+
+void Jogo::carregarRecorde() {
+    _recorde = 0;
+    std::ifstream arquivo(kArquivoRecorde);
+    int valor = 0;
+    if (arquivo >> valor && valor > 0) {
+        _recorde = valor;
+    }
+    // Arquivo ausente, vazio ou corrompido: o recorde simplesmente começa em zero.
+}
+
+void Jogo::salvarRecorde() const {
+    std::ofstream arquivo(kArquivoRecorde);
+    if (!arquivo.is_open()) {
+        TraceLog(LOG_WARNING, "Nao foi possivel salvar o recorde em %s", kArquivoRecorde);
+        return;
+    }
+    arquivo << _recorde << '\n';
 }
