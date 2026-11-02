@@ -47,13 +47,14 @@ struct Pos {
 class EntityData {
 public:
     /**
-     * @brief Construtor da classe EntityData.
+     * @brief Construtor da classe EntityData e destrutor logo abaixo.
      * @param type Tipo da entidade definido pelo enum EntityType.
      * @param x Posição inicial no eixo X.
      * @param y Posição inicial no eixo Y.
      * @param speed Velocidade de movimentação da entidade.
      */
     EntityData(EntityType type, float x, float y, float speed);
+    virtual ~EntityData() = default;
 
     /**
      * @brief Obtém o tipo da entidade.

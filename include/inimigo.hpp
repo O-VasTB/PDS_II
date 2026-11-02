@@ -1,148 +1,99 @@
+#ifndef INIMIGO_H
+#define INIMIGO_H
+
+#include <raylib.h>
+#include "entity_data.hpp"
+
 /**
- * @file Inimigo.hpp
- * @brief Contrato da classe Inimigo (inimigos que patrulham o mapa).
- *
- * Inimigo herda de EntityData (entity.hpp) e usa o tipo EntityType::Inimigo.
- * Ele anda de um lado para o outro dentro de um trecho do mapa
- * (limiteEsquerdo..limiteDireito). Não conhece o Jogador: quem decide se o
- * jogador pulou em cima ou foi tocado é o GerenciadorColisao, que depois
- * chama esmagar() ou lê getDano().
- *
- * Gravidade e colisão com chão/paredes ficam a cargo do GerenciadorColisao;
- * aqui só tratamos o movimento horizontal e o estado do inimigo.
+ * @file inimigo.hpp
+ * @brief Contrato da classe Inimigo e do enum TipoInimigo.
  */
-
-#ifndef INIMIGO_HPP
-#define INIMIGO_HPP
-
-#include "entity.hpp"
 
 /**
  * @enum TipoInimigo
- * @brief Variações de inimigo (definem velocidade, pontos e dano).
+ * @brief Variações de inimigo, que alteram velocidade, vida e pontuação.
  */
 enum class TipoInimigo {
-    GOOMBA,  /**< Lento e simples. */
-    KOOPA    /**< Mais rápido e vale mais pontos. */
-};
-
-/**
- * @enum EstadoInimigo
- * @brief Estados possíveis de um inimigo.
- *
- * Fluxo: ANDANDO -> ESMAGADO -> (some) ou ANDANDO -> MORTO.
- */
-enum class EstadoInimigo {
-    ANDANDO,   /**< Patrulhando; causa dano ao tocar no jogador. */
-    ESMAGADO,  /**< Pisado pelo jogador; fica parado um instante e some. */
-    MORTO      /**< Morreu por outro motivo; já removido do jogo. */
+    Goomba, /**< Inimigo básico que patrulha e morre com um pisão. */
+    Koopa   /**< Inimigo mais resistente, que exige mais de um golpe. */
 };
 
 /**
  * @class Inimigo
- * @brief Inimigo que patrulha um trecho do mapa.
+ * @brief Inimigo que patrulha o mapa horizontalmente.
+ *
+ * Inverte a direção ao colidir com paredes (tratado pelo nível) e pode ser
+ * derrotado por pisão ou por tiros do jogador.
  */
 class Inimigo : public EntityData {
 public:
     /**
-     * @brief Cria um inimigo.
-     * @param x              Posição horizontal inicial (pixels).
-     * @param y              Posição vertical inicial (pixels).
-     * @param tipo           Tipo do inimigo (define velocidade e pontos).
-     * @param limiteEsquerdo Borda esquerda do trecho de patrulha (pixels).
-     * @param limiteDireito  Borda direita do trecho de patrulha (pixels).
-     *
-     * Se os limites vierem trocados, o construtor os inverte.
+     * @brief Construtor de Inimigo.
+     * @param x Posição inicial no eixo X.
+     * @param y Posição inicial no eixo Y.
+     * @param speed Velocidade de patrulha.
+     * @param tipo Variação do inimigo.
      */
-    Inimigo(float x, float y, TipoInimigo tipo,
-            float limiteEsquerdo, float limiteDireito);
+    Inimigo(float x, float y, float speed, TipoInimigo tipo);
+
+    /** @brief Destrutor virtual. */
+    virtual ~Inimigo() = default;
 
     /**
-     * @brief Atualiza o inimigo a cada frame.
-     *
-     * - ANDANDO: move na direção atual e vira ao chegar num limite.
-     * - ESMAGADO: conta o tempo e some depois de um instante.
-     * - MORTO: garante que está removido do jogo.
-     *
-     * @param dt Tempo desde o último frame, em segundos.
+     * @brief Atualiza a posição do inimigo (patrulha horizontal).
+     * @param dt Tempo decorrido desde o último quadro, em segundos.
      */
     void atualizar(float dt);
 
-    /**
-     * @brief Inverte a direção de movimento.
-     *
-     * Usado internamente nos limites de patrulha e também pelo
-     * GerenciadorColisao quando o inimigo bate numa parede.
-     */
+    /** @brief Inverte a direção de patrulha (ao bater em parede ou borda). */
     void inverterDirecao();
 
     /**
-     * @brief Chamado quando o jogador pisa no inimigo.
-     *
-     * Muda o estado para ESMAGADO (só tem efeito se estiver ANDANDO).
+     * @brief Aplica dano ao inimigo; ele é marcado como morto quando a vida chega a zero.
+     * @param dano Quantidade de dano recebida.
      */
-    void esmagar();
+    void receberDano(int dano);
+
+    /** @brief Desenha o inimigo na tela usando Raylib. */
+    void desenhar() const;
 
     /**
-     * @brief Mata o inimigo na hora (ex.: caiu do mapa) e o remove do jogo.
+     * @brief Obtém a caixa de colisão do inimigo.
+     * @return Rectangle Retângulo com posição e dimensões do inimigo.
      */
-    void matar();
+    Rectangle getHitbox() const;
 
     /**
-     * @brief Informa se o inimigo ainda está andando (perigoso e derrotável).
-     * @return true se o estado é ANDANDO.
-     *
-     * Não confundir com confereVivo() da base, que indica se a entidade
-     * ainda existe no jogo (inclusive durante o estado ESMAGADO).
+     * @brief Obtém a variação do inimigo.
+     * @return TipoInimigo Goomba ou Koopa.
      */
-    bool estaAndando() const;
+    TipoInimigo getTipo() const;
 
-    bool foiPontuado() const;
-    void marcarPontuado();
+    /**
+     * @brief Obtém a vida restante do inimigo.
+     * @return int Pontos de vida restantes.
+     */
+    int getVida() const;
 
-    /** @brief Retorna o tipo de inimigo (Goomba, Koopa). */
-    TipoInimigo getTipoInimigo() const;
-
-    /** @brief Retorna o estado atual. */
-    EstadoInimigo getEstado() const;
-
-    /** @brief Retorna a direção: -1 (esquerda) ou +1 (direita). */
-    int getDirecao() const;
-
-    /** @brief Retorna a velocidade horizontal com sinal (0 se não estiver andando). */
-    float getVelocidadeX() const;
-
-    /** @brief Retorna os pontos que o jogador ganha ao derrotar este inimigo. */
+    /**
+     * @brief Obtém a pontuação concedida ao jogador ao derrotar este inimigo.
+     * @return int Pontos da recompensa.
+     */
     int getPontos() const;
 
-    /** @brief Retorna o dano causado ao jogador (0 se não estiver andando). */
-    int getDano() const;
-
-    /** @brief Retorna a largura da caixa de colisão, em pixels. */
-    float getLargura() const;
-
-    /** @brief Retorna a altura da caixa de colisão, em pixels. */
-    float getAltura() const;
+    /**
+     * @brief Obtém a direção atual de patrulha.
+     * @return int 1 (direita) ou -1 (esquerda).
+     */
+    int getDirecao() const;
 
 private:
-    TipoInimigo _tipoInimigo;  /**< Variação do inimigo. */
-    EstadoInimigo _estado;     /**< Estado atual. */
-    bool _pontuado; /**< Evita somar pontos múltiplas vezes enquanto esmagado. */
-    int _direcao;              /**< -1 = esquerda, +1 = direita. */
-    int _pontos;               /**< Pontos ao ser derrotado. */
-    int _dano;                 /**< Dano causado ao jogador. */
-    float _largura;            /**< Largura da caixa de colisão. */
-    float _altura;             /**< Altura da caixa de colisão. */
-    float _limiteEsquerdo;     /**< Borda esquerda da patrulha. */
-    float _limiteDireito;      /**< Borda direita da patrulha. */
-    float _tempoEsmagado;      /**< Tempo no estado ESMAGADO (segundos). */
-
-    /**
-     * @brief Velocidade de patrulha de cada tipo (usada no construtor da base).
-     * @param tipo Tipo do inimigo.
-     * @return Velocidade em pixels por segundo.
-     */
-    static float velocidadePorTipo(TipoInimigo tipo);
+    TipoInimigo _tipoInimigo; /**< Variação do inimigo. */
+    int _direcao;             /**< Direção atual de patrulha (1 ou -1). */
+    int _vida;                /**< Pontos de vida restantes. */
+    int _pontos;              /**< Pontuação concedida ao ser derrotado. */
+    float _largura;           /**< Largura da caixa de colisão. */
+    float _altura;            /**< Altura da caixa de colisão. */
 };
 
-#endif  // INIMIGO_HPP
+#endif
