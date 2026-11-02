@@ -1,7 +1,6 @@
-#ifndef MAPA_HPP
-#define MAPA_HPP
+#ifndef MAPA_H
+#define MAPA_H
 
-#include <vector>
 #include <string>
 #include <raylib.h> 
 
@@ -30,17 +29,17 @@ class Mapa {
 
     Texture2D tileset; /**< Textura da Raylib que contém os sprites de todos os blocos do mapa */
 
-    public:
     /**
-     * @brief Construtor padrão da classe Mapa.
+     * @brief Desenha os tiles visíveis pela câmera.
+     * @param camera Câmera 2D usada para calcular a região visível.
      */
-    Mapa();
+    void desenhar(const Camera2D& camera) const;
 
     /**
      * @brief Destrutor da classe Mapa.
      * Responsável por descarregar a textura do tileset para evitar vazamento de memória.
      */
-    ~Mapa();
+    TipoTile getTile(int coluna, int linha) const;
 
     /**
      * @brief Carrega a estrutura e matriz de blocos, além da imagem (tileset) do mapa. 
@@ -48,17 +47,18 @@ class Mapa {
      * @param caminhoImagem Caminho para a imagem PNG/BMP que será carregada no tileset.
      * @return true se carregou com sucesso, false caso contrário.
      */
-    bool carregarMapa(const std::string& caminhoDados, const std::string& caminhoImagem);
+    bool ehSolido(int coluna, int linha) const;
 
     int verificarColetaMoeda(float jogadorX, float jogadorY, float jogadorLargura, float jogadorAltura);
     bool verificarChegadaFim(float jogadorX, float jogadorY, float jogadorLargura, float jogadorAltura);
 
     /**
-     * @brief Desenha na tela apenas os blocos que estão visíveis dentro da câmera atual.
-     * @param cameraX Posição X atual da câmera no mundo.
-     * @param cameraY Posição Y atual da câmera no mundo.
+     * @brief Verifica se um retângulo colide com algum tile sólido.
+     * @param area Retângulo, em pixels, a ser testado.
+     * @return true Se houver colisão com algum tile sólido.
+     * @return false Caso contrário.
      */
-    void desenharBlocosVisiveis(float cameraX, float cameraY) const;
+    bool colideComSolido(const Rectangle& area) const;
 
     /**
      * @brief Altera o estado de blocos atingidos.
@@ -66,13 +66,13 @@ class Mapa {
      * @param x Índice X do bloco na matriz.
      * @param y Índice Y do bloco na matriz.
      */
-    void alterarEstadoBloco(int x, int y);
+    std::vector<Rectangle> getTilesSolidosProximos(const Rectangle& area) const;
 
     /**
      * @brief Retorna a largura total da fase.
      * @return Largura da fase.
      */
-    int getLargura() const;
+    bool tocaBandeira(const Rectangle& area) const;
 
     /**
      * @brief Retorna a altura total da fase.
