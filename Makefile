@@ -1,11 +1,3 @@
-# Makefile do jogo (C++11 + Raylib)
-#
-#   make        compila o jogo em build/jogo
-#   make run    compila (se preciso) e executa a partir da raiz do projeto
-#   make clean  remove a pasta build/
-#
-# Requer a Raylib instalada (https://www.raylib.com).
-
 CXX      := g++
 CXXFLAGS := -std=c++11 -Wall -Wextra -Iinclude -MMD -MP
 TARGET   := build/jogo
@@ -14,7 +6,6 @@ SRC := $(wildcard src/*.cpp)
 OBJ := $(patsubst src/%.cpp,build/%.o,$(SRC))
 DEP := $(OBJ:.o=.d)
 
-# Bibliotecas por sistema operacional
 ifeq ($(OS),Windows_NT)
     LDLIBS := -lraylib -lopengl32 -lgdi32 -lwinmm
     TARGET := build/jogo.exe
