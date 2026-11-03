@@ -1,8 +1,23 @@
-#include "Jogo.hpp"
+/**
+ * @file main.cpp
+ * @brief Ponto de entrada do jogo.
+ */
 
+#include <exception>
+#include <iostream>
+#include "jogo.hpp"
+
+/**
+ * @brief Cria o jogo e executa o laço principal.
+ * @return int 0 em caso de sucesso; 1 se ocorrer um erro fatal.
+ */
 int main() {
-    SetTraceLogLevel(LOG_ERROR);
-    Jogo jogo;
-    jogo.executar();
+    try {
+        Jogo jogo(960, 540, "Super PDS Bros");
+        jogo.executar();
+    } catch (const std::exception& e) {
+        std::cerr << "Erro fatal: " << e.what() << std::endl;
+        return 1;
+    }
     return 0;
 }

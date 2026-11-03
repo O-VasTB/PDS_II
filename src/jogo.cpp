@@ -7,8 +7,8 @@
 #include "jogo.hpp"
 
 namespace {
-const char* const kArquivoRecorde = "data/recorde.txt"; /**< Arquivo de persistência do recorde. */
-const char* const kPrefixoFase = "data/fase";           /**< Prefixo dos arquivos de fase (faseN.txt). */
+const char* const kArquivoRecorde = "design/data/recorde.txt"; /**< Arquivo de persistência do recorde. */
+const char* const kPrefixoFase = "design/fases/fase";           /**< Prefixo dos arquivos de fase (faseN.txt). */
 const float kPassoMaximo = 1.0f / 30.0f;  /**< Maior passo de tempo por quadro (evita "teleportes"). */
 const float kVelocidadeJogador = 220.0f;  /**< Velocidade horizontal do jogador, em pixels/s. */
 const float kVelocidadeGoomba = 70.0f;    /**< Velocidade de patrulha do Goomba. */
