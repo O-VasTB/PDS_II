@@ -1,40 +1,36 @@
-CXX      := g++
-CXXFLAGS := -std=c++11 -Wall -Wextra -Iinclude -MMD -MP
-TARGET   := build/jogo
+# Compilador e flags
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Iinclude
 
-SRC := $(wildcard src/*.cpp)
-OBJ := $(patsubst src/%.cpp,build/%.o,$(SRC))
-DEP := $(OBJ:.o=.d)
+# Bibliotecas e dependências da Raylib para Windows (MinGW/MSYS2)
+LIBS = lib/libraylib.a -lgdi32 -lwinmm -lpthread
 
-ifeq ($(OS),Windows_NT)
-    LDLIBS := -lraylib -lopengl32 -lgdi32 -lwinmm
-    TARGET := build/jogo.exe
-else
-    UNAME_S := $(shell uname -s)
-    ifeq ($(UNAME_S),Darwin)
-        LDLIBS := -lraylib -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
-    else
-        LDLIBS := -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
-    endif
-endif
+# Executável final de saída
+TARGET = build/jogo_executavel.exe
 
-.PHONY: all run clean
+# Lista de arquivos fonte e objetos
+SRC = $(wildcard src/*.cpp)
+OBJ = $(patsubst src/%.cpp, build/%.o, $(SRC))
 
+# Regra principal (compila)
 all: $(TARGET)
 
+# Ligação do executável
 $(TARGET): $(OBJ)
-	$(CXX) $(OBJ) -o $@ $(LDLIBS)
+	@mkdir -p build
+	$(CXX) $(OBJ) -o $@ $(LIBS)
 
-build/%.o: src/%.cpp | build
+# Compilação dos arquivos .cpp em objetos .o
+build/%.o: src/%.cpp
+	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-build:
-	mkdir -p build
+# Regra para compilar e executar o jogo imediatamente
+run: all
+	@./$(TARGET)
 
-run: $(TARGET)
-	./$(TARGET)
-
+# Limpeza dos arquivos compilados
 clean:
-	rm -rf build
+	rm -f build/*.o $(TARGET)
 
--include $(DEP)
+.PHONY: all run clean

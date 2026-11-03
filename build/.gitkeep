@@ -1,6 +1,0 @@
-build/
-bin/
-*.o
-*.gcno
-*.gcda
-*.gcov
