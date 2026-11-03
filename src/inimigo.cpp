@@ -1,117 +1,82 @@
-/**
- * @file inimigo.cpp
- * @brief Implementação dos métodos da classe Inimigo.
- */
+#include "inimigo.hpp"
 
-#include "Inimigo.hpp"
-#include <algorithm>
+namespace {
+const float kLargura = 28.0f;       /**< Largura da caixa de colisão. */
+const float kAlturaGoomba = 28.0f;  /**< Altura do Goomba. */
+const float kAlturaKoopa = 30.0f;   /**< Altura do Koopa. */
+const int kVidaGoomba = 1;          /**< Vida do Goomba. */
+const int kVidaKoopa = 2;           /**< Vida do Koopa. */
+const int kPontosGoomba = 100;      /**< Recompensa por derrotar um Goomba. */
+const int kPontosKoopa = 200;       /**< Recompensa por derrotar um Koopa. */
+}  // namespace
 
-float Inimigo::velocidadePorTipo(TipoInimigo tipo) {
-    if (tipo == TipoInimigo::GOOMBA) {
-        return 60.0f;
-    } else {
-        return 90.0f; // Koopa mais rápido
-    }
-}
-
-Inimigo::Inimigo(float xPos, float yPos, TipoInimigo tipo, float limiteEsquerdo, float limiteDireito)
-    : EntityData(EntityType::Inimigo, xPos, yPos, velocidadePorTipo(tipo)),
+Inimigo::Inimigo(float x, float y, float speed, TipoInimigo tipo)
+    : EntityData(EntityType::Inimigo, x, y, speed),
       _tipoInimigo(tipo),
-      _estado(EstadoInimigo::ANDANDO),
       _direcao(-1),
-      _pontos(tipo == TipoInimigo::GOOMBA ? 100 : 200),
-      _dano(1),
-      _largura(32.0f),
-      _altura(32.0f),
-      _limiteEsquerdo(std::min(limiteEsquerdo, limiteDireito)),
-      _limiteDireito(std::max(limiteEsquerdo, limiteDireito)),
-      _tempoEsmagado(0.0f)
-{
-}
+      _vida(tipo == TipoInimigo::Koopa ? kVidaKoopa : kVidaGoomba),
+      _pontos(tipo == TipoInimigo::Koopa ? kPontosKoopa : kPontosGoomba),
+      _largura(kLargura),
+      _altura(tipo == TipoInimigo::Koopa ? kAlturaKoopa : kAlturaGoomba) {}
 
 void Inimigo::atualizar(float dt) {
-    if (_estado == EstadoInimigo::MORTO) return;
-
-    if (_estado == EstadoInimigo::ESMAGADO) {
-        _tempoEsmagado += dt;
-        if (_tempoEsmagado > 1.0f) { // Desaparece após 1 segundo esmagado
-            _estado = EstadoInimigo::MORTO;
-        }
+    if (!confereVivo() || dt <= 0.0f) {
         return;
     }
-
-    if (_estado == EstadoInimigo::ANDANDO) {
-        float velocidade = velocidadePorTipo(_tipoInimigo);
-        _posicao.x += _direcao * velocidade * dt; // Acede diretamente a _posicao.x da base
-
-        // Verifica os limites de patrulha e inverte a direção se necessário
-        if (_posicao.x < _limiteEsquerdo) {
-            _posicao.x = _limiteEsquerdo;
-            inverterDirecao();
-        } else if (_posicao.x > _limiteDireito - _largura) {
-            _posicao.x = _limiteDireito - _largura;
-            inverterDirecao();
-        }
-    }
+    _posicao.x += _direcao * _vel * dt;
 }
 
 void Inimigo::inverterDirecao() {
-    _direcao *= -1;
+    _direcao = -_direcao;
 }
 
-void Inimigo::esmagar() {
-    if (_estado == EstadoInimigo::ANDANDO) {
-        _estado = EstadoInimigo::ESMAGADO;
-        _tempoEsmagado = 0.0f;
+void Inimigo::receberDano(int dano) {
+    if (dano <= 0 || !confereVivo()) {
+        return;
+    }
+    _vida -= dano;
+    if (_vida <= 0) {
+        _vida = 0;
+        setAlive(false);
     }
 }
 
-void Inimigo::matar() {
-    _estado = EstadoInimigo::MORTO;
+void Inimigo::desenhar() const {
+    if (!confereVivo()) {
+        return;
+    }
+    const Rectangle hb = getHitbox();
+    const Color corpo = (_tipoInimigo == TipoInimigo::Koopa) ? DARKGREEN : BROWN;
+    DrawRectangleRec(hb, corpo);
+
+    // "Pés" e olhos viram para o lado em que o inimigo anda.
+    DrawRectangle(static_cast<int>(hb.x), static_cast<int>(hb.y + hb.height - 6.0f),
+                  static_cast<int>(hb.width), 6, BLACK);
+    const int olhoY = static_cast<int>(hb.y) + 7;
+    const int olho1 = static_cast<int>(hb.x) + (_direcao > 0 ? 12 : 4);
+    DrawRectangle(olho1, olhoY, 6, 6, WHITE);
+    DrawRectangle(olho1 + 9, olhoY, 6, 6, WHITE);
+    DrawRectangle(olho1 + (_direcao > 0 ? 3 : 0), olhoY + 2, 3, 3, BLACK);
+    DrawRectangle(olho1 + 9 + (_direcao > 0 ? 3 : 0), olhoY + 2, 3, 3, BLACK);
 }
 
-bool Inimigo::estaAndando() const {
-    return _estado == EstadoInimigo::ANDANDO;
+Rectangle Inimigo::getHitbox() const {
+    Rectangle r = {_posicao.x, _posicao.y, _largura, _altura};
+    return r;
 }
 
-TipoInimigo Inimigo::getTipoInimigo() const {
+TipoInimigo Inimigo::getTipo() const {
     return _tipoInimigo;
 }
 
-EstadoInimigo Inimigo::getEstado() const {
-    return _estado;
-}
-
-int Inimigo::getDirecao() const {
-    return _direcao;
-}
-
-float Inimigo::getVelocidadeX() const {
-    if (_estado != EstadoInimigo::ANDANDO) return 0.0f;
-    return _direcao * velocidadePorTipo(_tipoInimigo);
+int Inimigo::getVida() const {
+    return _vida;
 }
 
 int Inimigo::getPontos() const {
     return _pontos;
 }
 
-int Inimigo::getDano() const {
-    if (_estado != EstadoInimigo::ANDANDO) return 0;
-    return _dano;
-}
-
-float Inimigo::getLargura() const {
-    return _largura;
-}
-
-float Inimigo::getAltura() const {
-    return _altura;
-}
-
-bool Inimigo::foiPontuado() const {
-    return _pontuado;
-}
-
-void Inimigo::marcarPontuado() {
-    _pontuado = true;
+int Inimigo::getDirecao() const {
+    return _direcao;
 }
