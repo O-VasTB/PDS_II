@@ -1,4 +1,4 @@
-// Testes de programação defensiva e tratamento de exceções (doctest).
+
 #include <cmath>
 #include <cstdio>
 #include <fstream>

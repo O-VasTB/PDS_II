@@ -1,36 +1,42 @@
-# Compilador e flags
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Iinclude
+CXX      = g++
+CXXFLAGS = -std=c++11 -Wall -Wextra -Iinclude -MMD -MP
 
-# Bibliotecas e dependências da Raylib para Windows (MinGW/MSYS2)
-LIBS = lib/libraylib.a -lgdi32 -lwinmm -lpthread
+# Raylib estática e dependências do Windows
+LIBS = lib/libraylib.a -lopengl32 -lgdi32 -lwinmm -lpthread
 
-# Executável final de saída
-TARGET = build/jogo_executavel.exe
+TARGET      = build/jogo_executavel.exe
+TEST_TARGET = build/testes.exe
 
-# Lista de arquivos fonte e objetos
-SRC = $(wildcard src/*.cpp)
-OBJ = $(patsubst src/%.cpp, build/%.o, $(SRC))
+SRC      = $(wildcard src/*.cpp)
+OBJ      = $(patsubst src/%.cpp,build/%.o,$(SRC))
+LIB_OBJ  = $(filter-out build/main.o,$(OBJ))
+TEST_SRC = $(wildcard tests/*.cpp)
 
-# Regra principal (compila)
+.PHONY: all run test clean
+
 all: $(TARGET)
 
-# Ligação do executável
 $(TARGET): $(OBJ)
 	@mkdir -p build
 	$(CXX) $(OBJ) -o $@ $(LIBS)
 
-# Compilação dos arquivos .cpp em objetos .o
 build/%.o: src/%.cpp
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Regra para compilar e executar o jogo imediatamente
 run: all
 	@./$(TARGET)
 
-# Limpeza dos arquivos compilados
-clean:
-	rm -f build/*.o $(TARGET)
+# Testes: todos os .cpp de src/ exceto main.cpp + os de tests/ (só um deles define o main do doctest)
+$(TEST_TARGET): $(TEST_SRC) $(LIB_OBJ)
+	@mkdir -p build
+	$(CXX) $(CXXFLAGS) -Itests $(TEST_SRC) $(LIB_OBJ) -o $@ $(LIBS)
 
-.PHONY: all run clean
+test: $(TEST_TARGET)
+	@./$(TEST_TARGET)
+
+clean:
+	rm -rf build
+
+# Dependências de cabeçalhos geradas pelo -MMD
+-include $(OBJ:.o=.d)
