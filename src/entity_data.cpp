@@ -1,7 +1,15 @@
 #include "entity_data.hpp"
+#include "excecoes.hpp"
+#include <cmath>
 
 EntityData::EntityData(EntityType type, float x, float y, float speed)
-    : _type(type), _vel(speed < 0.0f ? 0.0f : speed), vivo(true) {
+    : _type(type), _vel(speed), vivo(true) {
+        if (!std::isfinite(x) || !std::isfinite(y)) {
+            throw ErroValorInvalido("Posicao inicial invalida (NaN ou infinito)");
+        }
+        if (!std::isfinite(speed) || speed < 0.0f) {
+            throw ErroValorInvalido("A velocidade deve ser um numero finito e nao negativo");
+        }
     _posicao.x = x;
     _posicao.y = y;
 }

@@ -12,6 +12,7 @@ const int kMoedasPorVida = 100;        /**< Moedas necessárias para ganhar uma 
 const float kLargura = 26.0f;          /**< Largura da caixa de colisão. */
 const float kAlturaPequeno = 30.0f;    /**< Altura no estado Pequeno. */
 const float kAlturaGrande = 58.0f;     /**< Altura no estado Grande. */
+const int kPontuacaoMaxima = 999999999; /**< Define pontuação máxima para não dar */
 }  // namespace
 
 Jogador::Jogador(float x, float y, float speed)
@@ -129,9 +130,10 @@ void Jogador::adicionarMoeda() {
 }
 
 void Jogador::adicionarPontos(int pontos) {
-    if (pontos > 0) {
-        _pontuacao += pontos;
-    }
+     if (pontos <= 0) {
+       return;
+   }
+   _pontuacao = (pontos > kPontuacaoMaxima - _pontuacao) ? kPontuacaoMaxima : _pontuacao + pontos;
 }
 
 void Jogador::ganharVida() {

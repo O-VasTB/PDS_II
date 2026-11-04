@@ -13,7 +13,7 @@
  */
 int main() {
     try {
-        Jogo jogo(960, 540, "Super PDS Bros");
+        Jogo jogo(1280, 720, "JOGO PLATAFORMA");
         jogo.executar();
     } catch (const std::exception& e) {
         std::cerr << "Erro fatal: " << e.what() << std::endl;

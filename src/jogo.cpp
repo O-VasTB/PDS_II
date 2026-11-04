@@ -101,11 +101,24 @@ EstadoJogo Jogo::getEstado() const {
 }
 
 void Jogo::executar() {
+     const int kFalhasMaximas = 5;
+    int falhas = 0;
     while (!_deveSair && !WindowShouldClose()) {
-        processarEntrada();
-        atualizar(passoDeTempo());
-        desenhar();
-    }
+       try {
+           processarEntrada();
+           atualizar(passoDeTempo());
+           falhas = 0;
+       } catch (const std::exception& e) {
+           ++falhas;
+           g_mensagemErro = e.what();
+           TraceLog(LOG_ERROR, "Erro durante o quadro: %s", e.what());
+           if (falhas >= kFalhasMaximas) {
+               throw;
+           }
+           _estado = EstadoJogo::MenuPrincipal;
+       }
+       desenhar();
+   }
 }
 
 /* ========================================================================== */
