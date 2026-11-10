@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <stdexcept>
+#include "excecoes.hpp"
 #include "gerenciadores.hpp"
 #include "itens.hpp"
 
@@ -284,7 +285,7 @@ bool GerenciadorInput::acaoAcionada(Acao acao) const {
 
 void GerenciadorInput::setTecla(Acao acao, int tecla) {
     if (tecla <= KEY_NULL) {
-        throw std::invalid_argument("Tecla invalida para a acao informada");
+        throw ErroValorInvalido("Tecla invalida para a acao informada");
     }
     _teclas[acao] = tecla;
 }

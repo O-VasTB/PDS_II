@@ -3,10 +3,22 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include "excecoes.hpp"
 #include "mapa.hpp"
 
 namespace {
 const float kTamanhoTile = 32.0f; /**< Lado de cada tile, em pixels. */
+
+const std::size_t kMaxColunas = 2000; /**< Largura máxima aceita para um mapa, em tiles. */
+const std::size_t kMaxLinhas = 100;   /**< Altura máxima aceita para um mapa, em tiles. */
+
+// Plataformas dinâmicas. Referência de jogo: pulo de ~128 px de altura e ~180 px de alcance.
+const float kAlcanceHorizontal = 4.0f * 32.0f; /**< Trajeto das plataformas 'h', em pixels. */
+const float kAlcanceVertical = 3.0f * 32.0f;   /**< Trajeto das plataformas 'v', em pixels. */
+const float kVelocidadeHorizontal = 80.0f;     /**< Velocidade das plataformas 'h', em pixels/s. */
+const float kVelocidadeVertical = 60.0f;       /**< Velocidade das plataformas 'v', em pixels/s. */
+const float kTempoAviso = 0.5f;                /**< Tempo entre pisar em um '~' e ele sumir, em segundos. */
+const float kTempoAusente = 3.0f;              /**< Tempo que o '~' fica sumido, em segundos. */
 
 /** @brief Converte uma coordenada em pixels no índice do tile correspondente. */
 int paraIndice(float valor, float tile) {
@@ -16,6 +28,16 @@ int paraIndice(float valor, float tile) {
 /** @brief Indica se o símbolo representa um ponto de surgimento de inimigo ou item. */
 bool ehSimboloDeSpawn(char c) {
     return c == 'g' || c == 'k' || c == 'o' || c == 'm' || c == 's';
+}
+
+/** @brief Indica se os pés do jogador estão apoiados no topo de uma plataforma. */
+bool estaSobre(const Rectangle& jogador, const Rectangle& plataforma) {
+    const float pes = jogador.y + jogador.height;
+    if (pes > plataforma.y + plataforma.height / 2.0f) {
+        return false;  // jogador abaixo do topo da plataforma
+    }
+    const Rectangle sonda = {jogador.x, pes - 2.0f, jogador.width, 4.0f};
+    return CheckCollisionRecs(sonda, plataforma);
 }
 
 /** @brief Desenha um triângulo independentemente da ordem dos vértices. */
@@ -34,6 +56,8 @@ Mapa::Mapa()
 void Mapa::limpar() {
     _tiles.clear();
     _spawns.clear();
+    _moveis.clear();
+    _frageis.clear();
     _colunas = 0;
     _linhas = 0;
     _spawnJogador.x = 0.0f;
@@ -44,7 +68,7 @@ void Mapa::limpar() {
 void Mapa::carregarDeArquivo(const std::string& caminho) {
     std::ifstream arquivo(caminho.c_str());
     if (!arquivo.is_open()) {
-        throw std::runtime_error("Nao foi possivel abrir o mapa: " + caminho);
+        throw ErroArquivo("Nao foi possivel abrir o mapa: " + caminho);
     }
 
     // 1) Lê todas as linhas, descartando '\r' e espaços no fim de cada uma.
@@ -62,7 +86,16 @@ void Mapa::carregarDeArquivo(const std::string& caminho) {
         linhas.pop_back();  // ignora linhas em branco no final do arquivo
     }
     if (linhas.empty()) {
-        throw std::runtime_error("O arquivo do mapa esta vazio: " + caminho);
+        throw ErroArquivo("O arquivo do mapa esta vazio: " + caminho);
+    }
+
+    if (linhas.size() > kMaxLinhas) {
+        throw ErroMapa("Mapa com linhas demais (" + std::to_string(linhas.size()) +
+                       "; maximo " + std::to_string(kMaxLinhas) + ") em " + caminho);
+    }
+    if (linhas[0].size() > kMaxColunas) {
+        throw ErroMapa("Mapa com colunas demais (" + std::to_string(linhas[0].size()) +
+                       "; maximo " + std::to_string(kMaxColunas) + ") em " + caminho);
     }
 
     // 2) Valida e converte para estruturas temporárias, para que um arquivo inválido
@@ -70,13 +103,16 @@ void Mapa::carregarDeArquivo(const std::string& caminho) {
     const std::size_t largura = linhas[0].size();
     std::vector<std::vector<TipoTile> > tiles;
     std::vector<SpawnEntidade> spawns;
+    std::vector<PlataformaMovel> moveis;
+    std::vector<PlataformaFragil> frageis;
     Pos spawnJogador = {0.0f, 0.0f};
     bool achouJogador = false;
+    bool achouBandeira = false;
 
     for (std::size_t l = 0; l < linhas.size(); ++l) {
         if (linhas[l].size() != largura) {
-            throw std::invalid_argument("Linha " + std::to_string(l + 1) +
-                                        " com tamanho diferente das demais em " + caminho);
+            throw ErroMapa("Linha " + std::to_string(l + 1) +
+                           " com tamanho diferente das demais em " + caminho);
         }
         std::vector<TipoTile> fila(largura, TipoTile::Vazio);
         for (std::size_t c = 0; c < largura; ++c) {
@@ -91,37 +127,146 @@ void Mapa::carregarDeArquivo(const std::string& caminho) {
                 fila[c] = TipoTile::Plataforma;
             } else if (s == 'F') {
                 fila[c] = TipoTile::Bandeira;
+                achouBandeira = true;
             } else if (s == '@') {
-                if (!achouJogador) {  // se houver mais de um '@', vale o primeiro
-                    spawnJogador = pos;
-                    achouJogador = true;
+                if (achouJogador) {
+                    throw ErroMapa("Mais de um ponto de partida '@' (linha " + std::to_string(l + 1) +
+                                   ", coluna " + std::to_string(c + 1) + ") em " + caminho);
                 }
+                spawnJogador = pos;
+                achouJogador = true;
+            } else if (s == 'h' || s == 'v') {
+                if (c > 0 && linhas[l][c - 1] == s) {
+                    moveis.back().area.width += kTamanhoTile;  // continua a plataforma anterior
+                } else {
+                    PlataformaMovel pm;
+                    pm.area = Rectangle{pos.x, pos.y, kTamanhoTile, kTamanhoTile};
+                    pm.origem = pos;
+                    pm.horizontal = (s == 'h');
+                    pm.alcance = pm.horizontal ? kAlcanceHorizontal : kAlcanceVertical;
+                    pm.velocidade = pm.horizontal ? kVelocidadeHorizontal : kVelocidadeVertical;
+                    pm.deslocamento = 0.0f;
+                    pm.sentido = 1;
+                    moveis.push_back(pm);
+                }
+            } else if (s == '~') {
+                PlataformaFragil pf;
+                pf.area = Rectangle{pos.x, pos.y, kTamanhoTile, kTamanhoTile};
+                pf.estado = EstadoFragil::Estavel;
+                pf.tempo = 0.0f;
+                frageis.push_back(pf);
             } else if (ehSimboloDeSpawn(s)) {
                 SpawnEntidade sp;
                 sp.simbolo = s;
                 sp.posicao = pos;
                 spawns.push_back(sp);
             } else {
-                throw std::invalid_argument(std::string("Simbolo desconhecido '") + s +
-                                            "' na linha " + std::to_string(l + 1) + ", coluna " +
-                                            std::to_string(c + 1) + " de " + caminho);
+                throw ErroMapa(std::string("Simbolo desconhecido '") + s +
+                               "' na linha " + std::to_string(l + 1) + ", coluna " +
+                               std::to_string(c + 1) + " de " + caminho);
             }
         }
         tiles.push_back(fila);
     }
 
     if (!achouJogador) {
-        throw std::invalid_argument("O mapa nao possui o ponto de partida '@': " + caminho);
+        throw ErroMapa("O mapa nao possui o ponto de partida '@': " + caminho);
+    }
+
+    if (!achouBandeira) {
+        throw ErroMapa("O mapa nao possui a bandeira de fim de fase 'F': " + caminho);
     }
 
     // 3) Tudo certo: substitui o mapa atual.
     limpar();
     _tiles.swap(tiles);
     _spawns.swap(spawns);
+    _moveis.swap(moveis);
+    _frageis.swap(frageis);
     _colunas = static_cast<int>(largura);
     _linhas = static_cast<int>(linhas.size());
     _spawnJogador = spawnJogador;
     _carregado = true;
+}
+
+Pos Mapa::atualizar(float dt, const Rectangle& jogador) {
+    Pos carga = {0.0f, 0.0f};
+    if (!_carregado || dt <= 0.0f) {
+        return carga;
+    }
+
+    // Plataformas móveis: o jogador é carregado pela primeira em que estiver apoiado.
+    bool carregado = false;
+    for (std::size_t i = 0; i < _moveis.size(); ++i) {
+        PlataformaMovel& p = _moveis[i];
+        const bool apoiado = !carregado && estaSobre(jogador, p.area);
+        const Rectangle antes = p.area;
+
+        p.deslocamento += p.sentido * p.velocidade * dt;
+        if (p.deslocamento >= p.alcance) {
+            p.deslocamento = p.alcance;
+            p.sentido = -1;
+        } else if (p.deslocamento <= 0.0f) {
+            p.deslocamento = 0.0f;
+            p.sentido = 1;
+        }
+        if (p.horizontal) {
+            p.area.x = p.origem.x + p.deslocamento;
+        } else {
+            p.area.y = p.origem.y - p.deslocamento;
+        }
+
+        if (apoiado) {
+            carga.x = p.area.x - antes.x;
+            carga.y = p.area.y - antes.y;
+            carregado = true;
+        }
+    }
+
+    // Plataformas frágeis: pisar dispara a contagem; depois somem e voltam.
+    for (std::size_t i = 0; i < _frageis.size(); ++i) {
+        PlataformaFragil& f = _frageis[i];
+        switch (f.estado) {
+            case EstadoFragil::Estavel:
+                if (estaSobre(jogador, f.area)) {
+                    f.estado = EstadoFragil::Tremendo;
+                    f.tempo = kTempoAviso;
+                }
+                break;
+            case EstadoFragil::Tremendo:
+                f.tempo -= dt;
+                if (f.tempo <= 0.0f) {
+                    f.estado = EstadoFragil::Ausente;
+                    f.tempo = kTempoAusente;
+                }
+                break;
+            case EstadoFragil::Ausente:
+                if (f.tempo > 0.0f) {
+                    f.tempo -= dt;
+                }
+                // Só volta se o jogador não estiver no lugar, para não prendê-lo dentro do tile.
+                if (f.tempo <= 0.0f && !CheckCollisionRecs(jogador, f.area)) {
+                    f.estado = EstadoFragil::Estavel;
+                    f.tempo = 0.0f;
+                }
+                break;
+        }
+    }
+    return carga;
+}
+
+void Mapa::reiniciarDinamicas() {
+    for (std::size_t i = 0; i < _moveis.size(); ++i) {
+        PlataformaMovel& p = _moveis[i];
+        p.deslocamento = 0.0f;
+        p.sentido = 1;
+        p.area.x = p.origem.x;
+        p.area.y = p.origem.y;
+    }
+    for (std::size_t i = 0; i < _frageis.size(); ++i) {
+        _frageis[i].estado = EstadoFragil::Estavel;
+        _frageis[i].tempo = 0.0f;
+    }
 }
 
 void Mapa::desenhar(const Camera2D& camera) const {
@@ -163,6 +308,41 @@ void Mapa::desenhar(const Camera2D& camera) const {
             }
         }
     }
+
+    // Plataformas dinâmicas (apenas as que estão na região visível).
+    const Rectangle visivel = {canto0.x, canto0.y, canto1.x - canto0.x, canto1.y - canto0.y};
+    for (std::size_t i = 0; i < _moveis.size(); ++i) {
+        const Rectangle& r = _moveis[i].area;
+        if (!CheckCollisionRecs(visivel, r)) {
+            continue;
+        }
+        DrawRectangleRec(r, PURPLE);
+        DrawRectangleLinesEx(r, 2.0f, DARKPURPLE);
+        DrawRectangle(static_cast<int>(r.x) + 2, static_cast<int>(r.y) + 2,
+                      static_cast<int>(r.width) - 4, 4, VIOLET);
+    }
+    for (std::size_t i = 0; i < _frageis.size(); ++i) {
+        const PlataformaFragil& f = _frageis[i];
+        if (!CheckCollisionRecs(visivel, f.area)) {
+            continue;
+        }
+        if (f.estado == EstadoFragil::Ausente) {
+            DrawRectangleLinesEx(f.area, 1.0f, Fade(DARKGRAY, 0.35f));  // marca onde vai voltar
+            continue;
+        }
+        Rectangle r = f.area;
+        Color cor = BEIGE;
+        if (f.estado == EstadoFragil::Tremendo) {
+            r.x += static_cast<float>(static_cast<int>(GetTime() * 60.0) % 3) - 1.0f;  // treme
+            cor = Color{230, 160, 120, 255};
+        }
+        DrawRectangleRec(r, cor);
+        DrawRectangleLinesEx(r, 2.0f, DARKBROWN);
+        DrawLine(static_cast<int>(r.x) + 6, static_cast<int>(r.y) + 6,
+                 static_cast<int>(r.x) + 16, static_cast<int>(r.y) + 18, DARKBROWN);
+        DrawLine(static_cast<int>(r.x) + 16, static_cast<int>(r.y) + 18,
+                 static_cast<int>(r.x) + 12, static_cast<int>(r.y) + 28, DARKBROWN);
+    }
 }
 
 TipoTile Mapa::getTile(int coluna, int linha) const {
@@ -200,6 +380,16 @@ std::vector<Rectangle> Mapa::getTilesSolidosProximos(const Rectangle& area) cons
             if (CheckCollisionRecs(area, tile)) {
                 resultado.push_back(tile);
             }
+        }
+    }
+    for (std::size_t i = 0; i < _moveis.size(); ++i) {
+        if (CheckCollisionRecs(area, _moveis[i].area)) {
+            resultado.push_back(_moveis[i].area);
+        }
+    }
+    for (std::size_t i = 0; i < _frageis.size(); ++i) {
+        if (_frageis[i].estado != EstadoFragil::Ausente && CheckCollisionRecs(area, _frageis[i].area)) {
+            resultado.push_back(_frageis[i].area);
         }
     }
     return resultado;
@@ -258,4 +448,12 @@ Pos Mapa::getSpawnJogador() const {
 
 const std::vector<SpawnEntidade>& Mapa::getSpawns() const {
     return _spawns;
+}
+
+const std::vector<PlataformaMovel>& Mapa::getPlataformasMoveis() const {
+    return _moveis;
+}
+
+const std::vector<PlataformaFragil>& Mapa::getPlataformasFrageis() const {
+    return _frageis;
 }

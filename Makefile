@@ -16,27 +16,28 @@ TEST_SRC = $(wildcard tests/*.cpp)
 
 all: $(TARGET)
 
-$(TARGET): $(OBJ)
-	@mkdir -p build
+# "| build" cria a pasta uma única vez, sem usar "mkdir -p" (que não existe no cmd do Windows)
+$(TARGET): $(OBJ) | build
 	$(CXX) $(OBJ) -o $@ $(LIBS)
 
-build/%.o: src/%.cpp
-	@mkdir -p build
+build/%.o: src/%.cpp | build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+build:
+	mkdir build
+
 run: all
-	@./$(TARGET)
+	@$(subst /,\,$(TARGET))
 
 # Testes: todos os .cpp de src/ exceto main.cpp + os de tests/ (só um deles define o main do doctest)
-$(TEST_TARGET): $(TEST_SRC) $(LIB_OBJ)
-	@mkdir -p build
+$(TEST_TARGET): $(TEST_SRC) $(LIB_OBJ) | build
 	$(CXX) $(CXXFLAGS) -Itests $(TEST_SRC) $(LIB_OBJ) -o $@ $(LIBS)
 
 test: $(TEST_TARGET)
-	@./$(TEST_TARGET)
+	@$(subst /,\,$(TEST_TARGET))
 
 clean:
-	rm -rf build
+	if exist build rmdir /s /q build
 
 # Dependências de cabeçalhos geradas pelo -MMD
 -include $(OBJ:.o=.d)

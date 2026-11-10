@@ -4,6 +4,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include "excecoes.hpp"
 #include "jogo.hpp"
 
 namespace {
@@ -69,7 +70,7 @@ Jogo::Jogo(int largura, int altura, const std::string& titulo)
       _colisao(),
       _input() {
     if (largura <= 0 || altura <= 0) {
-        throw std::invalid_argument("Dimensoes da janela devem ser positivas");
+        throw ErroValorInvalido("Dimensoes da janela devem ser positivas");
     }
 
     InitWindow(largura, altura, titulo.c_str());
@@ -154,6 +155,7 @@ void Jogo::instanciarEntidades() {
     _inimigos.clear();
     _itens.clear();
     _tiros.clear();
+    _mapa.reiniciarDinamicas();  // plataformas móveis e frágeis voltam ao estado inicial
 
     const float tile = _mapa.getTamanhoTile();
 
@@ -285,6 +287,13 @@ void Jogo::atualizarPartida(float dt) {
     }
 
     _tempoRestante -= dt;
+
+    // Plataformas dinâmicas: movem-se antes da física e levam consigo quem está em cima delas.
+    const Pos carga = _mapa.atualizar(dt, _jogador->getHitbox());
+    if (carga.x != 0.0f || carga.y != 0.0f) {
+        const Pos atual = _jogador->getPosition();
+        _jogador->setPosition(atual.x + carga.x, atual.y + carga.y);
+    }
 
     // Física e movimento.
     _jogador->atualizar(dt, _gravidade);
