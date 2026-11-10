@@ -149,7 +149,7 @@ private:
     void tratarMorteDoJogador();
 
     /**
-     * @brief Avança para a próxima fase ou declara vitória na última.
+     * @brief Avança para a próxima fase ou declara vitória na última. Declaremos vitória!!!
      */
     void avancarFase();
 
