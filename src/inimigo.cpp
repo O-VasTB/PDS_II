@@ -2,22 +2,22 @@
 
 namespace {
 const float kLargura = 28.0f;       /**< Largura da caixa de colisão. */
-const float kAlturaGoomba = 28.0f;  /**< Altura do Goomba. */
-const float kAlturaKoopa = 30.0f;   /**< Altura do Koopa. */
-const int kVidaGoomba = 1;          /**< Vida do Goomba. */
-const int kVidaKoopa = 2;           /**< Vida do Koopa. */
-const int kPontosGoomba = 100;      /**< Recompensa por derrotar um Goomba. */
-const int kPontosKoopa = 200;       /**< Recompensa por derrotar um Koopa. */
+const float kAlturaAndarilho = 28.0f;  /**< Altura do Andarilho. */
+const float kAlturaEscudo = 30.0f;   /**< Altura do Escudo. */
+const int kVidaAndarilho = 1;          /**< Vida do Andarilho. */
+const int kVidaEscudo = 2;           /**< Vida do Escudo. */
+const int kPontosAndarilho = 100;      /**< Recompensa por derrotar um Andarilho. */
+const int kPontosEscudo = 200;       /**< Recompensa por derrotar um Escudo. */
 }  // namespace
 
 Inimigo::Inimigo(float x, float y, float speed, TipoInimigo tipo)
     : EntityData(EntityType::Inimigo, x, y, speed),
       _tipoInimigo(tipo),
       _direcao(-1),
-      _vida(tipo == TipoInimigo::Koopa ? kVidaKoopa : kVidaGoomba),
-      _pontos(tipo == TipoInimigo::Koopa ? kPontosKoopa : kPontosGoomba),
+      _vida(tipo == TipoInimigo::Escudo ? kVidaEscudo : kVidaAndarilho),
+      _pontos(tipo == TipoInimigo::Escudo ? kPontosEscudo : kPontosAndarilho),
       _largura(kLargura),
-      _altura(tipo == TipoInimigo::Koopa ? kAlturaKoopa : kAlturaGoomba) {}
+      _altura(tipo == TipoInimigo::Escudo ? kAlturaEscudo : kAlturaAndarilho) {}
 
 void Inimigo::atualizar(float dt) {
     if (!confereVivo() || dt <= 0.0f) {
@@ -46,7 +46,7 @@ void Inimigo::desenhar() const {
         return;
     }
     const Rectangle hb = getHitbox();
-    const Color corpo = (_tipoInimigo == TipoInimigo::Koopa) ? DARKGREEN : BROWN;
+    const Color corpo = (_tipoInimigo == TipoInimigo::Escudo) ? DARKGREEN : BROWN;
     DrawRectangleRec(hb, corpo);
 
     // "Pés" e olhos viram para o lado em que o inimigo anda.

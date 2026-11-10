@@ -55,8 +55,8 @@ TEST_CASE("EntityData: valores invalidos sao rejeitados no construtor") {
 
 TEST_CASE("EntityData: as classes derivadas repassam a validacao") {
     CHECK_THROWS_AS(Jogador(0.0f, 0.0f, -1.0f), ErroValorInvalido);
-    CHECK_THROWS_AS(Inimigo(0.0f, 0.0f, -1.0f, TipoInimigo::Goomba), ErroValorInvalido);
-    CHECK_THROWS_AS(Inimigo(std::numeric_limits<float>::quiet_NaN(), 0.0f, 1.0f, TipoInimigo::Koopa),
+    CHECK_THROWS_AS(Inimigo(0.0f, 0.0f, -1.0f, TipoInimigo::Andarilho), ErroValorInvalido);
+    CHECK_THROWS_AS(Inimigo(std::numeric_limits<float>::quiet_NaN(), 0.0f, 1.0f, TipoInimigo::Escudo),
                     ErroValorInvalido);
     CHECK_THROWS_AS(Cogumelo(0.0f, 0.0f, -2.0f), ErroValorInvalido);
     CHECK_THROWS_AS(Estrela(0.0f, 0.0f, -2.0f), ErroValorInvalido);
@@ -65,7 +65,7 @@ TEST_CASE("EntityData: as classes derivadas repassam a validacao") {
 
 TEST_CASE("EntityData: cada entidade informa o seu tipo (polimorfismo)") {
     Jogador jogador(1.0f, 2.0f, 100.0f);
-    Inimigo inimigo(3.0f, 4.0f, 50.0f, TipoInimigo::Goomba);
+    Inimigo inimigo(3.0f, 4.0f, 50.0f, TipoInimigo::Andarilho);
     Moeda moeda(5.0f, 6.0f);
 
     const EntityData* todas[] = {&jogador, &inimigo, &moeda};

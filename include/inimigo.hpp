@@ -14,8 +14,8 @@
  * @brief Variações de inimigo, que alteram velocidade, vida e pontuação.
  */
 enum class TipoInimigo {
-    Goomba, /**< Inimigo básico que patrulha e morre com um pisão. */
-    Koopa   /**< Inimigo mais resistente, que exige mais de um golpe. */
+    Andarilho, /**< Inimigo básico que patrulha e morre com um pisão. */
+    Escudo   /**< Inimigo mais resistente, que exige mais de um golpe. */
 };
 
 /**
@@ -65,7 +65,7 @@ public:
 
     /**
      * @brief Obtém a variação do inimigo.
-     * @return TipoInimigo Goomba ou Koopa.
+     * @return TipoInimigo Andarilho ou Escudo.
      */
     TipoInimigo getTipo() const;
 

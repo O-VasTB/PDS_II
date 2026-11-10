@@ -16,7 +16,7 @@ std::string gravar(const std::string& nome, const std::string& conteudo) {
 
 // 6 colunas x 3 linhas (tile = 32 px):
 //   linha 0: "...o.."   moeda em (96, 0)
-//   linha 1: "@.g.mF"   jogador em (0, 32), goomba (64, 32), cogumelo (128, 32), bandeira em (160, 32)
+//   linha 1: "@.g.mF"   jogador em (0, 32), andarilho (64, 32), cogumelo (128, 32), bandeira em (160, 32)
 //   linha 2: "######"   chao de y=64 a y=96
 const char* const kMapa = "...o..\n@.g.mF\n######\n";
 }  // namespace

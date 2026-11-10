@@ -11,8 +11,8 @@ const char* const kArquivoRecorde = "design/data/recorde.txt"; /**< Arquivo de p
 const char* const kPrefixoFase = "design/fases/fase";           /**< Prefixo dos arquivos de fase (faseN.txt). */
 const float kPassoMaximo = 1.0f / 30.0f;  /**< Maior passo de tempo por quadro (evita "teleportes"). */
 const float kVelocidadeJogador = 220.0f;  /**< Velocidade horizontal do jogador, em pixels/s. */
-const float kVelocidadeGoomba = 70.0f;    /**< Velocidade de patrulha do Goomba. */
-const float kVelocidadeKoopa = 55.0f;     /**< Velocidade de patrulha do Koopa. */
+const float kVelocidadeAndarilho = 70.0f;    /**< Velocidade de patrulha do Andarilho. */
+const float kVelocidadeEscudo = 55.0f;     /**< Velocidade de patrulha do Escudo. */
 const float kVelocidadeCogumelo = 60.0f;  /**< Velocidade do cogumelo. */
 const float kVelocidadeEstrela = 90.0f;   /**< Velocidade horizontal da estrela. */
 const float kInvencibilidadeRenascer = 2.0f; /**< Invencibilidade ao renascer, em segundos. */
@@ -172,13 +172,13 @@ void Jogo::instanciarEntidades() {
         const SpawnEntidade& sp = spawns[i];
         switch (sp.simbolo) {
             case 'g': {
-                std::unique_ptr<Inimigo> e(new Inimigo(0.0f, 0.0f, kVelocidadeGoomba, TipoInimigo::Goomba));
+                std::unique_ptr<Inimigo> e(new Inimigo(0.0f, 0.0f, kVelocidadeAndarilho, TipoInimigo::Andarilho));
                 posicionarNoTile(*e, sp.posicao, tile);
                 _inimigos.push_back(std::move(e));
                 break;
             }
             case 'k': {
-                std::unique_ptr<Inimigo> e(new Inimigo(0.0f, 0.0f, kVelocidadeKoopa, TipoInimigo::Koopa));
+                std::unique_ptr<Inimigo> e(new Inimigo(0.0f, 0.0f, kVelocidadeEscudo, TipoInimigo::Escudo));
                 posicionarNoTile(*e, sp.posicao, tile);
                 _inimigos.push_back(std::move(e));
                 break;

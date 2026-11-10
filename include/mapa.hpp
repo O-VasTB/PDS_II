@@ -20,8 +20,8 @@
  * | '='     | Plataforma (sólida)                 |
  * | 'F'     | Bandeira de fim de fase             |
  * | '@'     | Ponto de partida do jogador         |
- * | 'g'     | Spawn de Goomba                     |
- * | 'k'     | Spawn de Koopa                      |
+ * | 'g'     | Spawn de Andarilho                     |
+ * | 'k'     | Spawn de Escudo                      |
  * | 'o'     | Spawn de Moeda                      |
  * | 'm'     | Spawn de Cogumelo                   |
  * | 's'     | Spawn de Estrela                    |
