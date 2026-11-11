@@ -19,6 +19,8 @@ const float kVelocidadeEstrela = 90.0f;   /**< Velocidade horizontal da estrela.
 const float kInvencibilidadeRenascer = 2.0f; /**< Invencibilidade ao renascer, em segundos. */
 const int kBonusPorSegundo = 10;          /**< Pontos por segundo restante ao concluir a fase. */
 const int kOpcoesMenu = 2;                /**< Quantidade de opções do menu principal. */
+const char* const kCodigoBoss = "BOSS"; /**< Sequência de teclas que pula para a fase do boss. */
+std::string g_codigoDigitado;           /**< Últimas teclas digitadas durante a partida. */
 
 /** Última mensagem de erro (ex.: fase inválida), exibida no menu principal. */
 std::string g_mensagemErro;
@@ -50,6 +52,10 @@ void matarJogador(Jogador& jogador) {
         jogador.levarDano();
     }
 }
+
+RenderTexture2D g_alvo;      /**< Textura de desenho com a resolução lógica do jogo. */
+bool g_alvoPronto = false;
+
 }  // namespace
 
 Jogo::Jogo(int largura, int altura, const std::string& titulo)
@@ -79,6 +85,10 @@ Jogo::Jogo(int largura, int altura, const std::string& titulo)
     }
     SetTargetFPS(60);
 
+    g_alvo = LoadRenderTexture(largura, altura);
+    SetTextureFilter(g_alvo.texture, TEXTURE_FILTER_BILINEAR);
+    g_alvoPronto = true;
+
     _camera.offset = Vector2{largura / 2.0f, altura / 2.0f};
     _camera.target = Vector2{largura / 2.0f, altura / 2.0f};
     _camera.rotation = 0.0f;
@@ -94,6 +104,12 @@ Jogo::Jogo(int largura, int altura, const std::string& titulo)
 
 Jogo::~Jogo() {
     salvarRecorde();
+
+     if (g_alvoPronto) {
+        UnloadRenderTexture(g_alvo);
+        g_alvoPronto = false;
+    }
+
     CloseWindow();
 }
 
@@ -155,6 +171,8 @@ void Jogo::instanciarEntidades() {
     _inimigos.clear();
     _itens.clear();
     _tiros.clear();
+    _tirosBoss.clear();
+    _boss.reset();
     _mapa.reiniciarDinamicas();  // plataformas móveis e frágeis voltam ao estado inicial
 
     const float tile = _mapa.getTamanhoTile();
@@ -203,6 +221,11 @@ void Jogo::instanciarEntidades() {
                 _itens.push_back(std::move(it));
                 break;
             }
+              case 'B': {
+                _boss.reset(new Boss(0.0f, 0.0f));
+                posicionarNoTile(*_boss, sp.posicao, tile);
+                break;
+            }
             default:
                 break;  // o Mapa já garante que só chegam símbolos conhecidos
         }
@@ -214,6 +237,9 @@ std::string Jogo::caminhoFase(int fase) const {
 }
 
 void Jogo::processarEntrada() {
+    if (IsKeyPressed(KEY_F11)) {
+        ToggleFullscreen();
+    }
     switch (_estado) {
         case EstadoJogo::MenuPrincipal: {
             if (_input.acaoAcionada(Acao::Cima)) {
@@ -232,6 +258,24 @@ void Jogo::processarEntrada() {
             break;
         }
         case EstadoJogo::Jogando: {
+             for (int k = GetKeyPressed(); k != 0; k = GetKeyPressed()) {
+                if (k >= KEY_A && k <= KEY_Z) {
+                    g_codigoDigitado += static_cast<char>(k);  // KEY_A..KEY_Z coincidem com 'A'..'Z'
+                    const std::size_t n = std::string(kCodigoBoss).size();
+                    if (g_codigoDigitado.size() > n) {
+                        g_codigoDigitado.erase(0, g_codigoDigitado.size() - n);
+                    }
+                    if (g_codigoDigitado == kCodigoBoss) {
+                        g_codigoDigitado.clear();
+                        try {
+                            carregarFase(_totalFases);
+                        } catch (const std::exception& e) {
+                            g_mensagemErro = e.what();
+                            TraceLog(LOG_ERROR, "Falha ao pular para o boss: %s", e.what());
+                        }
+                    }
+                }
+            }
             if (_input.acaoAcionada(Acao::Pausar)) {
                 _estado = EstadoJogo::Pausado;
                 break;
@@ -334,11 +378,63 @@ void Jogo::atualizarPartida(float dt) {
         tratarMorteDoJogador();
         return;
     }
+     if (_boss && !_boss->confereVivo()) {
+        avancarFase();
+        return;
+    }
     if (_colisao.jogadorChegouAoFim(*_jogador, _mapa)) {
         avancarFase();
         return;
     }
     atualizarCamera();
+    atualizarBoss(dt);
+}
+
+void Jogo::atualizarBoss(float dt) {
+    if (!_boss || !_boss->confereVivo() || !_jogador) {
+        return;
+    }
+    const Rectangle jh = _jogador->getHitbox();
+    _boss->atualizar(dt, jh.x + jh.width / 2.0f, _tirosBoss);
+
+    // Tiros do jogador no boss.
+    for (std::size_t i = 0; i < _tiros.size(); ++i) {
+        if (_tiros[i]->confereVivo() &&
+            CheckCollisionRecs(_tiros[i]->getHitbox(), _boss->getHitbox())) {
+            _boss->receberDano(_tiros[i]->getDano());
+            _tiros[i]->setAlive(false);
+        }
+    }
+
+    // Contato: pisão machuca o boss; qualquer outro contato machuca o jogador.
+    const Rectangle bh = _boss->getHitbox();
+    if (CheckCollisionRecs(jh, bh)) {
+        const bool pisao = _jogador->getVelY() > 0.0f && (jh.y + jh.height) - bh.y < bh.height * 0.4f;
+        if (pisao) {
+            _boss->receberDano(1);
+            _jogador->setPosition(_jogador->getPosition().x, bh.y - jh.height);
+            _jogador->setVelY(-350.0f);
+        } else {
+            _jogador->levarDano();
+        }
+    }
+
+    // Tiros do boss.
+    for (std::size_t i = 0; i < _tirosBoss.size(); ++i) {
+        TiroBoss& t = *_tirosBoss[i];
+        t.atualizar(dt);
+        const Rectangle th = t.getHitbox();
+        if (th.x < 0.0f || th.x + th.width > _mapa.getLarguraPx() || _mapa.colideComSolido(th)) {
+            t.setAlive(false);
+        } else if (CheckCollisionRecs(th, _jogador->getHitbox())) {
+            _jogador->levarDano();
+            t.setAlive(false);
+        }
+    }
+
+    if (!_boss->confereVivo()) {
+        _jogador->adicionarPontos(_boss->getPontos());
+    }
 }
 
 void Jogo::removerEntidadesInativas() {
@@ -351,6 +447,9 @@ void Jogo::removerEntidadesInativas() {
     _tiros.erase(std::remove_if(_tiros.begin(), _tiros.end(),
                                 [](const std::unique_ptr<Tiro>& e) { return !e->confereVivo(); }),
                  _tiros.end());
+    _tirosBoss.erase(std::remove_if(_tirosBoss.begin(), _tirosBoss.end(),
+                                [](const std::unique_ptr<TiroBoss>& e) { return !e->confereVivo(); }),
+                 _tirosBoss.end());
 }
 
 void Jogo::tratarMorteDoJogador() {
@@ -424,7 +523,7 @@ void Jogo::atualizarCamera() {
 /* ========================================================================== */
 
 void Jogo::desenhar() {
-    BeginDrawing();
+    BeginTextureMode(g_alvo);
     ClearBackground(SKYBLUE);
 
     if (_estado == EstadoJogo::MenuPrincipal) {
@@ -448,6 +547,17 @@ void Jogo::desenhar() {
                                   "Pontuacao: " + std::to_string(pontos) + "  -  ENTER para voltar ao menu");
         }
     }
+      EndTextureMode();
+
+    BeginDrawing();
+    ClearBackground(BLACK);
+    const float escala = std::min(GetScreenWidth() / static_cast<float>(_largura),
+                                  GetScreenHeight() / static_cast<float>(_altura));
+    const float lw = _largura * escala;
+    const float lh = _altura * escala;
+    const Rectangle origem{0.0f, 0.0f, static_cast<float>(_largura), -static_cast<float>(_altura)};
+    const Rectangle destino{(GetScreenWidth() - lw) / 2.0f, (GetScreenHeight() - lh) / 2.0f, lw, lh};
+    DrawTexturePro(g_alvo.texture, origem, destino, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
     EndDrawing();
 }
 
@@ -489,6 +599,12 @@ void Jogo::desenharMundo() const {
     }
     for (std::size_t i = 0; i < _tiros.size(); ++i) {
         _tiros[i]->desenhar();
+    }
+    if (_boss) {
+        _boss->desenhar();
+    }
+    for (std::size_t i = 0; i < _tirosBoss.size(); ++i) {
+        _tirosBoss[i]->desenhar();
     }
     if (_jogador) {
         _jogador->desenhar();

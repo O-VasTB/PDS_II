@@ -13,6 +13,7 @@
 #include "mapa.hpp"
 #include "hud.hpp"
 #include "gerenciadores.hpp"
+#include "boss.hpp"
 
 /**
  * @file jogo.hpp
@@ -143,6 +144,8 @@ private:
      */
     void removerEntidadesInativas();
 
+    void atualizarBoss(float dt);
+
     /**
      * @brief Trata a perda de uma vida: reinicia a fase ou encerra o jogo.
      */
@@ -185,6 +188,8 @@ private:
     std::vector<std::unique_ptr<Inimigo> > _inimigos; /**< Inimigos ativos na fase. */
     std::vector<std::unique_ptr<Item> > _itens;     /**< Itens ativos na fase. */
     std::vector<std::unique_ptr<Tiro> > _tiros;     /**< Tiros ativos na fase. */
+    std::unique_ptr<Boss> _boss;                        /**< Boss da fase (nulo se não houver). */
+    std::vector<std::unique_ptr<TiroBoss> > _tirosBoss; /**< Tiros do boss ativos. */
 };
 
 #endif

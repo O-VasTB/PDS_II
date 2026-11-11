@@ -275,12 +275,16 @@ GerenciadorInput::GerenciadorInput() {
 
 bool GerenciadorInput::acaoPressionada(Acao acao) const {
     const int tecla = getTecla(acao);
-    return tecla != KEY_NULL && IsKeyDown(tecla);
+    std::map<Acao, int>::const_iterator alt = _teclasAlt.find(acao);
+    return (tecla != KEY_NULL && IsKeyDown(tecla)) ||
+           (alt != _teclasAlt.end() && IsKeyDown(alt->second));
 }
 
 bool GerenciadorInput::acaoAcionada(Acao acao) const {
     const int tecla = getTecla(acao);
-    return tecla != KEY_NULL && IsKeyPressed(tecla);
+    std::map<Acao, int>::const_iterator alt = _teclasAlt.find(acao);
+    return (tecla != KEY_NULL && IsKeyPressed(tecla)) ||
+           (alt != _teclasAlt.end() && IsKeyPressed(alt->second));
 }
 
 void GerenciadorInput::setTecla(Acao acao, int tecla) {
@@ -305,4 +309,10 @@ void GerenciadorInput::restaurarPadrao() {
     _teclas[Acao::Confirmar] = KEY_ENTER;
     _teclas[Acao::Cima] = KEY_UP;
     _teclas[Acao::Baixo] = KEY_DOWN;
+     _teclasAlt.clear();
+    _teclasAlt[Acao::Esquerda] = KEY_A;
+    _teclasAlt[Acao::Direita] = KEY_D;
+    _teclasAlt[Acao::Pular] = KEY_W;
+    _teclasAlt[Acao::Cima] = KEY_W;
+    _teclasAlt[Acao::Baixo] = KEY_S;
 }

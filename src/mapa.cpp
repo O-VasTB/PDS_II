@@ -27,7 +27,7 @@ int paraIndice(float valor, float tile) {
 
 /** @brief Indica se o símbolo representa um ponto de surgimento de inimigo ou item. */
 bool ehSimboloDeSpawn(char c) {
-    return c == 'g' || c == 'k' || c == 'o' || c == 'm' || c == 's';
+       return c == 'g' || c == 'k' || c == 'o' || c == 'm' || c == 's' || c == 'B';
 }
 
 /** @brief Indica se os pés do jogador estão apoiados no topo de uma plataforma. */

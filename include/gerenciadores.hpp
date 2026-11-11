@@ -202,7 +202,8 @@ public:
     void restaurarPadrao();
 
 private:
-    std::map<Acao, int> _teclas; /**< Mapeamento entre ações e teclas do Raylib. */
+    std::map<Acao, int> _teclas;    /**< Mapeamento entre ações e teclas do Raylib. */
+    std::map<Acao, int> _teclasAlt; /**< Teclas alternativas (WASD). */
 };
 
 #endif
