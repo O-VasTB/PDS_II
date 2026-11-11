@@ -560,7 +560,7 @@ void Jogo::desenhar() {
                                   "Pontuacao: " + std::to_string(pontos) + "  -  ENTER para voltar ao menu");
         } else if (_estado == EstadoJogo::Vitoria) {
             const int pontos = _jogador ? _jogador->getPontuacao() : 0;
-            _hud.desenharMensagem("VOCE VENCEU!",
+            _hud.desenharMensagem("DECLAREMOS VITÓRIA!",
                                   "Pontuacao: " + std::to_string(pontos) + "  -  ENTER para voltar ao menu");
         }
     }

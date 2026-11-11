@@ -173,6 +173,7 @@ void Jogador::desenhar() const {
         desenharNosPes(tex, quadro % colunas, quadro / colunas, 26, altura, hb, 1.0f, _direcao < 0);
         return;
     }
+    /*
     DrawRectangleRec(hb, RED);
     DrawRectangle(static_cast<int>(hb.x), static_cast<int>(hb.y), static_cast<int>(hb.width), 8, MAROON);
 
@@ -180,6 +181,7 @@ void Jogador::desenhar() const {
     const int olhoY = static_cast<int>(hb.y) + 12;
     DrawRectangle(olhoX, olhoY, 6, 6, WHITE);
     DrawRectangle(olhoX + (_direcao > 0 ? 3 : 1), olhoY + 2, 3, 3, BLACK);
+    */
 }
 
 Rectangle Jogador::getHitbox() const {
