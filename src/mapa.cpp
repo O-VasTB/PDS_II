@@ -287,16 +287,27 @@ void Mapa::desenhar(const Camera2D& camera) const {
             const TipoTile tipo = _tiles[l][c];
             const Rectangle r = {c * _tamanhoTile, l * _tamanhoTile, _tamanhoTile, _tamanhoTile};
 
-            if (tipo == TipoTile::Chao) {
-                DrawRectangleRec(r, BROWN);
-                DrawRectangleLinesEx(r, 1.0f, DARKBROWN);
-                if (!ehSolido(c, l - 1)) {
-                    DrawRectangle(static_cast<int>(r.x), static_cast<int>(r.y),
-                                  static_cast<int>(r.width), 6, DARKGREEN);
+                       if (tipo == TipoTile::Chao) {
+                const Texture2D& tex = EntityData::textura(!ehSolido(c, l - 1) ? "Sprites/Chao-1.png"
+                                                                                : "Sprites/Chao-2.png");
+                if (tex.id != 0) {
+                    EntityData::desenharQuadro(tex, 0, 0, 32, 32, r);
+                } else {
+                    DrawRectangleRec(r, BROWN);
+                    DrawRectangleLinesEx(r, 1.0f, DARKBROWN);
+                    if (!ehSolido(c, l - 1)) {
+                        DrawRectangle(static_cast<int>(r.x), static_cast<int>(r.y),
+                                      static_cast<int>(r.width), 6, DARKGREEN);
+                    }
                 }
             } else if (tipo == TipoTile::Plataforma) {
-                DrawRectangleRec(r, ORANGE);
-                DrawRectangleLinesEx(r, 1.0f, MAROON);
+                const Texture2D& tex = EntityData::textura("Sprites/Bloco.png");
+                if (tex.id != 0) {
+                    EntityData::desenharQuadro(tex, 0, 0, 32, 32, r);
+                } else {
+                    DrawRectangleRec(r, ORANGE);
+                    DrawRectangleLinesEx(r, 1.0f, MAROON);
+                }
             } else if (tipo == TipoTile::Bandeira) {
                 DrawRectangle(static_cast<int>(r.x) + 14, static_cast<int>(r.y), 4,
                               static_cast<int>(r.height), LIGHTGRAY);
@@ -314,6 +325,13 @@ void Mapa::desenhar(const Camera2D& camera) const {
     for (std::size_t i = 0; i < _moveis.size(); ++i) {
         const Rectangle& r = _moveis[i].area;
         if (!CheckCollisionRecs(visivel, r)) {
+            continue;
+        }
+        const Texture2D& tex = EntityData::textura("Sprites/Plataforma_move.png");
+        if (tex.id != 0) {
+            for (float x = r.x; x < r.x + r.width - 1.0f; x += kTamanhoTile) {
+                EntityData::desenharQuadro(tex, 0, 0, 32, 32, Rectangle{x, r.y, kTamanhoTile, r.height});
+            }
             continue;
         }
         DrawRectangleRec(r, PURPLE);
@@ -344,6 +362,7 @@ void Mapa::desenhar(const Camera2D& camera) const {
                  static_cast<int>(r.x) + 12, static_cast<int>(r.y) + 28, DARKBROWN);
     }
 }
+
 
 TipoTile Mapa::getTile(int coluna, int linha) const {
     if (!_carregado || coluna < 0 || linha < 0 || coluna >= _colunas || linha >= _linhas) {

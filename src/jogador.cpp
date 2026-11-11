@@ -13,6 +13,9 @@ const float kLargura = 26.0f;          /**< Largura da caixa de colisão. */
 const float kAlturaPequeno = 30.0f;    /**< Altura no estado Pequeno. */
 const float kAlturaGrande = 58.0f;     /**< Altura no estado Grande. */
 const int kPontuacaoMaxima = 999999999; /**< Define pontuação máxima para não dar */
+bool g_andando = false;                    /**< Houve movimento horizontal neste quadro. */
+float g_tempoAnim = 0.0f;                  /**< Tempo contínuo andando, para a animação. */
+const float kQuadrosPorSegundo = 8.0f;     /**< Velocidade da animação de andar. */
 }  // namespace
 
 Jogador::Jogador(float x, float y, float speed)
@@ -36,6 +39,7 @@ void Jogador::moverEsquerda(float dt) {
         return;
     }
     _direcao = -1;
+    g_andando = true;
     _posicao.x -= _vel * dt;
 }
 
@@ -44,6 +48,7 @@ void Jogador::moverDireita(float dt) {
         return;
     }
     _direcao = 1;
+    g_andando = true;
     _posicao.x += _vel * dt;
 }
 
@@ -78,6 +83,12 @@ void Jogador::atualizar(float dt, float gravidade) {
             _recargaTiro = 0.0f;
         }
     }
+    if (g_andando && _noChao) {
+        g_tempoAnim += dt;
+    } else if (!g_andando) {
+        g_tempoAnim = 0.0f;
+    }
+    g_andando = false;
 }
 
 std::unique_ptr<Tiro> Jogador::atirar() {
@@ -150,6 +161,18 @@ void Jogador::desenhar() const {
     }
 
     const Rectangle hb = getHitbox();
+    const bool grande = (_estado == EstadoPoder::Grande);
+    const Texture2D& tex = textura(grande ? "Sprites/Mauro_2.png" : "Sprites/Mauro_1.png");
+    if (tex.id != 0) {
+        const int colunas = grande ? 3 : 2;
+        const int altura = grande ? 58 : 30;
+        int quadro = 0;
+        if (_noChao && g_tempoAnim > 0.0f) {
+            quadro = static_cast<int>(g_tempoAnim * kQuadrosPorSegundo) % 4;
+        }
+        desenharNosPes(tex, quadro % colunas, quadro / colunas, 26, altura, hb, 1.0f, _direcao < 0);
+        return;
+    }
     DrawRectangleRec(hb, RED);
     DrawRectangle(static_cast<int>(hb.x), static_cast<int>(hb.y), static_cast<int>(hb.width), 8, MAROON);
 

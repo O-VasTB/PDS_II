@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <raylib.h>
+#include <string>
 
 /**
  * @file entity.hpp
@@ -87,6 +88,21 @@ public:
      * @param alive Booleano indicando o novo estado de vida da entidade.
      */
     void setAlive(bool alive);
+
+    /** @brief Carrega (uma única vez) e devolve a textura do arquivo; id == 0 se não existir. */
+    static const Texture2D& textura(const char* caminho);
+
+    /** @brief Libera todas as texturas carregadas (chamar antes de CloseWindow). */
+    static void liberarTexturas();
+
+    /** @brief Desenha um quadro (coluna, linha) da sheet dentro de 'destino', espelhando se pedido. */
+    static void desenharQuadro(const Texture2D& tex, int coluna, int linha, int larguraQuadro,
+                               int alturaQuadro, const Rectangle& destino, bool espelhar = false);
+
+    /** @brief Desenha um quadro centralizado na hitbox e alinhado pelos pés, em tamanho natural x escala. */
+    static void desenharNosPes(const Texture2D& tex, int coluna, int linha, int larguraQuadro,
+                               int alturaQuadro, const Rectangle& hitbox, float escala = 1.0f,
+                               bool espelhar = false);
 
 protected:
     EntityType _type; /**< Tipo identificador da entidade. */

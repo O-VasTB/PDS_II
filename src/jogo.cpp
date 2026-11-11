@@ -110,6 +110,8 @@ Jogo::~Jogo() {
         g_alvoPronto = false;
     }
 
+    EntityData::liberarTexturas();
+
     CloseWindow();
 }
 
@@ -529,6 +531,21 @@ void Jogo::desenhar() {
     if (_estado == EstadoJogo::MenuPrincipal) {
         desenharMenu();
     } else {
+        {
+            const bool arenaBoss = (_faseAtual == _totalFases);  // a última fase é a do boss
+            const Texture2D& bg = EntityData::textura(arenaBoss ? "Sprites/Fundo_boss.png"
+                                                                  : "Sprites/Fundo_fase.png");
+            if (bg.id != 0) {
+                const Rectangle origem = {0.0f, 0.0f, static_cast<float>(bg.width), static_cast<float>(bg.height)};
+                const float larguraTile = bg.width * (static_cast<float>(_altura) / bg.height);
+                const float fator = arenaBoss ? 0.0f : 0.3f;  // parallax: o fundo anda mais devagar
+                const float desloc = std::fmod((_camera.target.x - _largura / 2.0f) * fator, larguraTile);
+                for (float x = -desloc; x < _largura; x += larguraTile) {
+                    DrawTexturePro(bg, origem, Rectangle{std::floor(x), 0.0f, larguraTile, static_cast<float>(_altura)},
+                                   Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                }
+            }
+        }
         if (_jogador) {
             _hud.atualizar(*_jogador, _tempoRestante, _faseAtual, _recorde);
         }
@@ -562,12 +579,17 @@ void Jogo::desenhar() {
 }
 
 void Jogo::desenharMenu() const {
-    DrawRectangle(0, 0, _largura, _altura, DARKBLUE);
-
-    const char* titulo = "SUPER PDS BROS";
-    const int fonteTitulo = 56;
-    DrawText(titulo, (_largura - MeasureText(titulo, fonteTitulo)) / 2, _altura / 5, fonteTitulo, WHITE);
-
+       const Texture2D& fundo = EntityData::textura("Sprites/Titulo.png");
+    if (fundo.id != 0) {
+        const Rectangle origem = {0.0f, 0.0f, static_cast<float>(fundo.width), static_cast<float>(fundo.height)};
+        const Rectangle destino = {0.0f, 0.0f, static_cast<float>(_largura), static_cast<float>(_altura)};
+        DrawTexturePro(fundo, origem, destino, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+    } else {
+        DrawRectangle(0, 0, _largura, _altura, DARKBLUE);
+        const char* titulo = "SUPER PDS BROS";
+        const int fonteTitulo = 56;
+        DrawText(titulo, (_largura - MeasureText(titulo, fonteTitulo)) / 2, _altura / 5, fonteTitulo, WHITE);
+    }
     const char* opcoes[kOpcoesMenu] = {"JOGAR", "SAIR"};
     for (int i = 0; i < kOpcoesMenu; ++i) {
         const bool selecionada = (i == _opcaoMenu);

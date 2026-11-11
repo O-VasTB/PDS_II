@@ -13,7 +13,6 @@
 #include "mapa.hpp"
 #include "hud.hpp"
 #include "gerenciadores.hpp"
-#include "boss.hpp"
 
 /**
  * @file jogo.hpp

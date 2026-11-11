@@ -55,6 +55,14 @@ void Moeda::desenhar() const {
     if (!confereVivo()) {
         return;
     }
+    const Texture2D& tex = textura("Sprites/Moeda.png");
+    if (tex.id != 0) {
+        const float giro = std::fabs(std::sin(static_cast<float>(GetTime()) * 6.0f));
+        const float largura = _largura * (0.25f + 0.75f * giro);  // mantém o efeito de girar
+        const Rectangle destino = {_posicao.x + (_largura - largura) / 2.0f, _posicao.y, largura, _altura};
+        desenharQuadro(tex, 0, 0, 20, 24, destino);
+        return;
+    }
     // Largura oscila para simular a moeda girando.
     const float giro = std::fabs(std::sin(static_cast<float>(GetTime()) * 6.0f));
     const int cx = static_cast<int>(_posicao.x + _largura / 2.0f);
@@ -105,6 +113,11 @@ void Cogumelo::inverterDirecao() {
 
 void Cogumelo::desenhar() const {
     if (!confereVivo()) {
+        return;
+    }
+    const Texture2D& tex = textura("Sprites/Cogumelo.png");
+    if (tex.id != 0) {
+        desenharQuadro(tex, 0, 0, 26, 26, getHitbox());
         return;
     }
     const int x = static_cast<int>(_posicao.x);

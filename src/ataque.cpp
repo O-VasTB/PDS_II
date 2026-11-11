@@ -36,6 +36,11 @@ void Tiro::desenhar() const {
     if (!confereVivo()) {
         return;
     }
+    const Texture2D& tex = textura("Sprites/Tiro_Mauro.png");
+    if (tex.id != 0) {
+        desenharQuadro(tex, 0, 0, 10, 10, getHitbox(), _direcao < 0);
+        return;
+    }
     const int cx = static_cast<int>(_posicao.x + _largura / 2.0f);
     const int cy = static_cast<int>(_posicao.y + _altura / 2.0f);
     DrawCircle(cx, cy, _largura / 2.0f, ORANGE);
