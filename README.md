@@ -54,9 +54,9 @@ Criando fases
 
 Cada fase é um arquivo de texto em design/fases/faseN.txt. O jogo conta as fases em sequência (fase1, fase2, ...) e a última é tratada como a fase do boss. Todas as linhas devem ter o mesmo comprimento, com exatamente um @ e ao menos um F.
 
-Símbolo	Significado
+# Símbolo	Significado
 .	Vazio
-#	Chão
+"#"	Chão
 =	Bloco / plataforma fixa
 F	Bandeira (fim da fase)
 @	Início do jogador
@@ -72,19 +72,21 @@ v	Plataforma móvel vertical (uma sequência de v forma uma plataforma)
 
 Cada tile tem 32 × 32 px.
 
-Sprites
+# Sprites
 
 As imagens ficam em Sprites/. Se um arquivo não for encontrado, o jogo usa um desenho simples no lugar e avisa no terminal.
 
 Arquivo	Uso
-Mauro_1.png, Mauro_2.png	Jogador pequeno e grande
+Mauro_1.png, Mauro_2.png, Jogador pequeno e grande
 Inimigo_1.png, Inimigo_2.png	Andarilho e Escudo
 boss.png, Ataque_boss.png	Boss e seu tiro
 Tiro_Mauro.png	Tiro do jogador
 Moeda.png, Cogumelo.png	Itens
 Chao-1.png, Chao-2.png, Bloco.png, Plataforma_move.png	Cenário
 Titulo.png, Fundo_fase.png, Fundo_boss.png	Tela de título e fundos
-Equipe
+
+# Equipe
+
 Eduardo Rodrigues - 2026020471
 Mateus Paulo - 2026019970
 Felipe Alves - 2026020331
